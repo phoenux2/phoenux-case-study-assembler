@@ -54,7 +54,7 @@ Knowledge Base
 
 ---
 
-Next (hardening)
+Hardening (bridge) ✅ / partial
 
 Proxy/auth session layer ✅
 
@@ -64,6 +64,72 @@ Cloud agent environment bootstrap ✅
 
 Hard public export gate (claims + assets + evidence) ✅
 
-Supabase production wiring (env + migrations)
+Output layout composer (QnA → drag-tweak) ✅
 
-UX polish / accessibility pass
+---
+
+Phase 5 — Traceable export safety
+
+Structured `ExportViolation` / export-readiness UI
+
+Provenance invalidation when answers, assets, or evidence change
+
+---
+
+Phase 6 — Prompt truth + AI-off proof
+
+Single prompt registry (no duplicated `docs/PROMPTS.md` bodies)
+
+AI cache includes model and schema versions
+
+Playwright AI-off + local-mode full workflow test
+
+---
+
+Phase 7 — Mobile output composer
+
+Phone-usable Compose / Preview / Publish
+
+Touch-friendly drag-and-drop
+
+Responsive Collect → Clarify → Build → Review → Publish workflow
+
+---
+
+Phase 8 — Fact vs claim lifecycle
+
+Explicit fact → claim candidate → approved claim
+
+Claims require evidence
+
+Facts do not need editorial approval
+
+---
+
+Phase 9 — Knowledge scopes + domain cleanup
+
+Project vs organization knowledge separation
+
+Remove `phase4` naming from domains and UI
+
+Retrieval never promotes org knowledge to project history
+
+---
+
+Phase 10 — Production wiring
+
+Supabase migrations 001–004 live
+
+Host env + real auth
+
+Asset storage
+
+---
+
+Phase 11 — Observability + audit
+
+AI cost / latency / cache metrics
+
+Who approved what
+
+Repository interface so services stop branching on local vs Supabase
