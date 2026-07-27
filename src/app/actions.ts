@@ -21,6 +21,14 @@ import { rebuildContentBlocks } from "@/lib/services/blocks";
 import { createOutput, setApproval } from "@/lib/services/outputs";
 import type { OutputType } from "@/lib/db/block-types";
 import type { ApprovalStatus } from "@/lib/db/types";
+import {
+  getAiStatus,
+  runClaimReview,
+  runEditorial,
+  runExtraction,
+  runGapDetection,
+  runQuestionRefinement,
+} from "@/lib/services/ai-pipeline";
 
 export type ActionResult = {
   ok: boolean;
@@ -250,4 +258,159 @@ export async function createOutputAction(
     redirect(`/projects/${projectId}/outputs/${result.output.id}`);
   }
   return { ok: true };
+}
+
+export type PipelineActionResult = ActionResult & {
+  summary?: string;
+  meta?: string;
+};
+
+function formatMeta(meta: {
+  used_ai: boolean;
+  provider: string;
+  cached: boolean;
+}): string {
+  return `${meta.provider}${meta.cached ? " · cached" : ""}${
+    meta.used_ai ? " · ai" : " · deterministic"
+  }`;
+}
+
+export async function runExtractionAction(
+  projectId: string,
+): Promise<PipelineActionResult> {
+  const user = await requireSessionUser();
+  try {
+    const { extraction, meta } = await runExtraction(projectId, user.id);
+    revalidatePath(`/projects/${projectId}`);
+    return {
+      ok: true,
+      summary: [
+        `Facts: ${extraction.facts.map((fact) => `${fact.key}=${fact.value}`).join("; ") || "none"}`,
+        extraction.unsupported_claims.length
+          ? `Unsupported: ${extraction.unsupported_claims.join("; ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      meta: formatMeta(meta),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Extraction failed",
+    };
+  }
+}
+
+export async function runGapDetectionAction(
+  projectId: string,
+): Promise<PipelineActionResult> {
+  const user = await requireSessionUser();
+  try {
+    const { result, meta } = await runGapDetection(projectId, user.id);
+    return {
+      ok: true,
+      summary: [
+        `Coverage score: ${result.coverage_score}`,
+        ...result.gaps.map(
+          (gap) => `[${gap.severity}] ${gap.field}: ${gap.reason}`,
+        ),
+        result.blocked_outputs.length
+          ? `Blocked outputs: ${result.blocked_outputs.join(", ")}`
+          : "No blocked outputs",
+      ].join("\n"),
+      meta: formatMeta(meta),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Gap detection failed",
+    };
+  }
+}
+
+export async function runQuestionRefinementAction(
+  projectId: string,
+): Promise<PipelineActionResult> {
+  const user = await requireSessionUser();
+  try {
+    const { result, meta } = await runQuestionRefinement(projectId, user.id);
+    return {
+      ok: true,
+      summary: result.questions
+        .map((question) => `${question.text}\nWhy: ${question.why}`)
+        .join("\n\n"),
+      meta: formatMeta(meta),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error ? error.message : "Question refinement failed",
+    };
+  }
+}
+
+export async function runClaimReviewAction(
+  projectId: string,
+  claimId: string,
+): Promise<PipelineActionResult> {
+  const user = await requireSessionUser();
+  try {
+    const { result, meta } = await runClaimReview(projectId, user.id, claimId);
+    return {
+      ok: true,
+      summary: [
+        `Verdict: ${result.verdict}`,
+        result.reasoning,
+        result.missing_evidence.length
+          ? `Missing: ${result.missing_evidence.join("; ")}`
+          : null,
+        result.permission_issues.length
+          ? `Permissions: ${result.permission_issues.join("; ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      meta: formatMeta(meta),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Claim review failed",
+    };
+  }
+}
+
+export async function runEditorialAction(
+  projectId: string,
+  outputType: string,
+): Promise<PipelineActionResult> {
+  const user = await requireSessionUser();
+  try {
+    const { result, meta } = await runEditorial(
+      projectId,
+      user.id,
+      outputType,
+    );
+    return {
+      ok: true,
+      summary: [
+        ...result.sections.map(
+          (section) => `${section.heading}\n${section.body}`,
+        ),
+        ...result.editorial_notes,
+      ].join("\n\n"),
+      meta: formatMeta(meta),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Editorial failed",
+    };
+  }
+}
+
+export async function getAiStatusAction() {
+  return getAiStatus();
 }

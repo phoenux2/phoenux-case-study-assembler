@@ -1,36 +1,36 @@
-# Phase 2 — Content blocks, outputs, review, PDF
+# Phase 3 — AI pipeline
 
 ## Goal
 
-Assemble reusable content blocks from answers, gate exports with review, and generate platform outputs including printable PDF.
+Add extraction, gap detection, question refinement, claim review, and editorial with cached AI calls and deterministic fallbacks.
 
 ## Context
 
-- CONTENT_BLOCKS.md
-- OUTPUTS.md
-- SECURITY.md
-- ROADMAP.md Phase 2
+- AI_PIPELINE.md
+- docs/PROMPTS.md
+- AGENTS.md
+- ROADMAP.md Phase 3
 
 ## Acceptance Criteria
 
-- Rebuild creates deterministic blocks/claims from answers
-- Approve/reject for blocks, claims, assets, outputs
-- Assemble website / LinkedIn / Upwork / PDF from approved blocks only
-- Blocked assets cannot export
-- Print/Save PDF available on PDF and website outputs
+- Prompt registry references docs/PROMPTS.md IDs/versions
+- AI disabled path works end-to-end
+- Requests are cached by prompt id/version/input hash
+- Facts stored with provenance
+- Claim review flags unsupported metrics / blocked assets
+- Editorial does not invent facts
 
 ## Constraints
 
-- No AI editorial writing
-- Outputs introduce no new facts
-- Provenance preserved on assembled records
+- Never resend raw project files
+- AI receives summaries only
+- App usable with AI disabled
 
 ## Tests
 
-- Unit: block assembly + export validation
-- Playwright: rebuild → approve → assemble website
+- Unit: deterministic tasks + prompt hashing + extraction integration
+- Playwright: extraction with AI disabled
 
 ## Out of Scope
 
-- AI extraction / gap detection / editorial polish
-- Vision / Figma
+- Vision / Figma / retrieval knowledge base

@@ -27,6 +27,7 @@ import type {
   OutputType,
 } from "@/lib/db/block-types";
 import type { ApprovalStatus } from "@/lib/db/types";
+import type { StructuredFactRecord } from "@/lib/db/ai-types";
 
 type LocalDb = {
   profiles: Profile[];
@@ -40,6 +41,7 @@ type LocalDb = {
   claims: Claim[];
   evidence: Evidence[];
   outputs: OutputRecord[];
+  facts: StructuredFactRecord[];
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -72,6 +74,7 @@ function emptyDb(): LocalDb {
     claims: [],
     evidence: [],
     outputs: [],
+    facts: [],
   };
 }
 
@@ -90,6 +93,7 @@ async function ensureDb(): Promise<LocalDb> {
       claims: parsed.claims ?? [],
       evidence: parsed.evidence ?? [],
       outputs: parsed.outputs ?? [],
+      facts: parsed.facts ?? [],
     };
   } catch {
     const db = emptyDb();
@@ -607,6 +611,51 @@ export async function createLocalOutput(input: {
   db.outputs.push(output);
   await saveDb(db);
   return output;
+}
+
+
+export async function listLocalFacts(projectId: string): Promise<StructuredFactRecord[]> {
+  const db = await ensureDb();
+  return db.facts
+    .filter((fact) => fact.project_id === projectId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export async function upsertLocalFacts(
+  projectId: string,
+  sourceId: string | null,
+  facts: Array<Omit<StructuredFactRecord, "id" | "created_at" | "updated_at" | "project_id">>,
+): Promise<StructuredFactRecord[]> {
+  const db = await ensureDb();
+  const timestamp = now();
+  const created: StructuredFactRecord[] = [];
+  for (const fact of facts) {
+    const existingIndex = db.facts.findIndex(
+      (row) =>
+        row.project_id === projectId &&
+        row.key === fact.key &&
+        row.value === fact.value,
+    );
+    if (existingIndex >= 0) {
+      created.push(db.facts[existingIndex]);
+      continue;
+    }
+    const record: StructuredFactRecord = {
+      id: randomUUID(),
+      project_id: projectId,
+      source_id: sourceId,
+      key: fact.key,
+      value: fact.value,
+      confidence: fact.confidence,
+      provenance: fact.provenance,
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+    db.facts.push(record);
+    created.push(record);
+  }
+  await saveDb(db);
+  return created;
 }
 
 /** Test helper — reset local DB between unit tests. */

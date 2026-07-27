@@ -95,3 +95,24 @@ test("phase 2 can rebuild blocks, approve, and assemble website output", async (
   await expect(page.getByText(/Assembled from approved blocks only/i)).toBeVisible();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 });
+
+test("phase 3 extraction works with AI disabled", async ({ page }) => {
+  await page.goto("/projects/new");
+  const title = `AI Pipeline ${Date.now()}`;
+  await page.getByLabel("Project title").fill(title);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await page.getByLabel("Note title").fill("Brief");
+  await page
+    .getByLabel("Content")
+    .fill("Problem: Users abandoned onboarding mid-flow. See wireframe.png.");
+  await page.getByRole("button", { name: "Add text source" }).click();
+  await expect(page.getByText("Source saved.")).toBeVisible();
+
+  await expect(page.getByText("AI disabled · deterministic")).toBeVisible();
+  await page.getByRole("button", { name: "Run extraction" }).click();
+  await expect(page.getByTestId("pipeline-result")).toBeVisible();
+  await expect(page.getByTestId("pipeline-result")).toContainText("Extraction result");
+  await expect(page.getByTestId("fact-item").first()).toBeVisible();
+  await expect(page.getByTestId("fact-list")).toContainText("problem");
+});

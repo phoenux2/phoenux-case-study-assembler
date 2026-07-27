@@ -4,12 +4,12 @@ Internal application for reconstructing projects into reusable case studies.
 
 ## Status
 
-Phase 1 + Phase 2 foundations are implemented:
+Phase 1–3 foundations are implemented:
 
 - Next.js + TypeScript + Tailwind + shadcn/ui
-- Projects, sources, assets, adaptive questions (no AI)
+- Projects, sources, assets, adaptive questions
 - Deterministic content blocks, claims, review gates, and outputs
-- Website / LinkedIn / Upwork / printable PDF assembly
+- AI pipeline (extraction / gaps / refinement / claim review / editorial) with deterministic fallbacks + cache
 - Local JSON mode when Supabase env vars are missing
 
 ## Quick start

@@ -7,6 +7,7 @@ import {
 } from "@/components/projects/source-forms";
 import { QuestionEnginePanel } from "@/components/projects/question-engine";
 import { AssemblyPanel } from "@/components/projects/assembly-panel";
+import { AiPipelinePanel } from "@/components/projects/ai-pipeline-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ import { getCoverageSnapshot } from "@/lib/services/questions";
 import { listSources } from "@/lib/services/sources";
 import { listClaims, listContentBlocks } from "@/lib/services/blocks";
 import { listOutputs } from "@/lib/services/outputs";
+import { getAiStatus, listFacts } from "@/lib/services/ai-pipeline";
 
 export default async function ProjectDetailPage({
   params,
@@ -45,14 +47,16 @@ export default async function ProjectDetailPage({
   const project = await getProject(id, user.id);
   if (!project) notFound();
 
-  const [sources, assets, blocks, claims, outputs] = await Promise.all([
+  const [sources, assets, blocks, claims, outputs, facts] = await Promise.all([
     listSources(project.id),
     listAssets(project.id),
     listContentBlocks(project.id),
     listClaims(project.id),
     listOutputs(project.id),
+    listFacts(project.id),
   ]);
   const coverage = await getCoverageSnapshot(project, sources, assets);
+  const aiStatus = getAiStatus();
 
   return (
     <div className="flex flex-col gap-8">
@@ -98,6 +102,14 @@ export default async function ProjectDetailPage({
         claims={claims}
         assets={assets}
         outputs={outputs}
+      />
+
+      <AiPipelinePanel
+        projectId={project.id}
+        aiEnabled={aiStatus.enabled}
+        provider={aiStatus.provider}
+        facts={facts}
+        claims={claims}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
