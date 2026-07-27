@@ -29,6 +29,14 @@ import {
   runGapDetection,
   runQuestionRefinement,
 } from "@/lib/services/ai-pipeline";
+import { analyzeAssetVision } from "@/lib/services/vision";
+import { figmaStatus, importFigmaFile } from "@/lib/services/figma";
+import {
+  listKnowledge,
+  rebuildKnowledgeBase,
+  searchKnowledge,
+} from "@/lib/services/knowledge";
+import type { RetrievalHit } from "@/lib/db/phase4-types";
 
 export type ActionResult = {
   ok: boolean;
@@ -413,4 +421,110 @@ export async function runEditorialAction(
 
 export async function getAiStatusAction() {
   return getAiStatus();
+}
+
+export async function analyzeVisionAction(
+  projectId: string,
+  assetId: string,
+): Promise<PipelineActionResult> {
+  const user = await requireSessionUser();
+  try {
+    const { analysis, meta } = await analyzeAssetVision(
+      projectId,
+      user.id,
+      assetId,
+    );
+    revalidatePath(`/projects/${projectId}`);
+    return {
+      ok: true,
+      summary: [
+        `Title: ${analysis.title_suggestion}`,
+        `Category: ${analysis.category}`,
+        `Phase: ${analysis.phase}`,
+        analysis.description,
+        analysis.ui_elements.length
+          ? `UI cues: ${analysis.ui_elements.join(", ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      meta: formatMeta(meta),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Vision failed",
+    };
+  }
+}
+
+export async function importFigmaAction(
+  projectId: string,
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireSessionUser();
+  const figmaUrl = String(formData.get("figma_url") || "").trim();
+  if (!figmaUrl) return { ok: false, error: "Figma URL or key is required" };
+
+  try {
+    await importFigmaFile(projectId, user.id, figmaUrl);
+    revalidatePath(`/projects/${projectId}`);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Figma import failed",
+    };
+  }
+}
+
+export async function rebuildKnowledgeAction(
+  projectId: string,
+): Promise<PipelineActionResult> {
+  const user = await requireSessionUser();
+  try {
+    const entries = await rebuildKnowledgeBase(projectId, user.id);
+    revalidatePath(`/projects/${projectId}`);
+    return {
+      ok: true,
+      summary: `Indexed ${entries.length} knowledge entries`,
+      meta: "deterministic",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error ? error.message : "Knowledge rebuild failed",
+    };
+  }
+}
+
+export async function searchKnowledgeAction(
+  projectId: string,
+  query: string,
+): Promise<PipelineActionResult & { hits?: RetrievalHit[] }> {
+  const user = await requireSessionUser();
+  try {
+    const result = await searchKnowledge(projectId, user.id, query);
+    return {
+      ok: true,
+      summary: `${result.hits.length} hits for “${result.query}”`,
+      meta: result.notes[0],
+      hits: result.hits,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Search failed",
+    };
+  }
+}
+
+export async function getFigmaStatusAction() {
+  return figmaStatus();
+}
+
+export async function listKnowledgeAction(projectId: string) {
+  return listKnowledge(projectId);
 }

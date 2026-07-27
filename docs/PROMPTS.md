@@ -41,6 +41,7 @@ See also: `AI_PIPELINE.md`, `AGENTS.md`, `SECURITY.md`.
 | `claim-review` | Validate claims against evidence | v1 | draft |
 | `editorial` | Polish approved blocks for a target output | v1 | draft |
 | `compression` | Summarize context for token-efficient AI calls | v1 | draft |
+| `vision` | Analyze one image asset on demand | v1 | draft |
 
 ---
 
@@ -359,3 +360,31 @@ Initial version.
 - Cache AI responses keyed by `(prompt_id, version, input_hash)`.
 - Raw project files must not be re-sent on every call—use compression summaries.
 - When AI is disabled, features that depend on these prompts must degrade gracefully (manual entry, deterministic fallbacks).
+
+
+---
+
+## Vision v1
+
+**Task:** Analyze a single image asset on demand using metadata/summaries — never batch-process every upload.
+
+### Prompt template
+
+```
+[PLACEHOLDER — Vision v1]
+
+You analyze a single project image asset.
+
+Rules:
+- Use only provided metadata and any attached summary.
+- Do not invent metrics, research, or outcomes.
+- Suggest category/phase/description only when grounded.
+- Return JSON matching the vision output schema.
+
+Asset metadata:
+{{asset_metadata}}
+```
+
+### Changes from previous
+
+Initial version.

@@ -116,3 +116,25 @@ test("phase 3 extraction works with AI disabled", async ({ page }) => {
   await expect(page.getByTestId("fact-item").first()).toBeVisible();
   await expect(page.getByTestId("fact-list")).toContainText("problem");
 });
+
+test("phase 4 figma import, vision, and knowledge retrieval", async ({
+  page,
+}) => {
+  await page.goto("/projects/new");
+  const title = `Phase4 ${Date.now()}`;
+  await page.getByLabel("Project title").fill(title);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await page.getByLabel("File URL or key").fill("AbCdEf12345XYZ");
+  await page.getByRole("button", { name: "Import Figma" }).click();
+  await expect(page.getByText("Figma import saved.")).toBeVisible();
+  await expect(page.getByText("Cover").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Analyze" }).first().click();
+  await expect(page.getByTestId("vision-result")).toBeVisible();
+
+  await page.getByRole("button", { name: "Rebuild index" }).click();
+  await page.getByLabel("Retrieve").fill("problem flow");
+  await page.getByRole("button", { name: "Search knowledge" }).click();
+  await expect(page.getByTestId("retrieval-hits")).toBeVisible();
+});

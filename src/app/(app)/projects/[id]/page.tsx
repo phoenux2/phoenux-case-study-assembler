@@ -8,6 +8,7 @@ import {
 import { QuestionEnginePanel } from "@/components/projects/question-engine";
 import { AssemblyPanel } from "@/components/projects/assembly-panel";
 import { AiPipelinePanel } from "@/components/projects/ai-pipeline-panel";
+import { Phase4Panel } from "@/components/projects/phase4-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,8 @@ import { listSources } from "@/lib/services/sources";
 import { listClaims, listContentBlocks } from "@/lib/services/blocks";
 import { listOutputs } from "@/lib/services/outputs";
 import { getAiStatus, listFacts } from "@/lib/services/ai-pipeline";
+import { listKnowledge } from "@/lib/services/knowledge";
+import { figmaStatus } from "@/lib/services/figma";
 
 export default async function ProjectDetailPage({
   params,
@@ -47,16 +50,18 @@ export default async function ProjectDetailPage({
   const project = await getProject(id, user.id);
   if (!project) notFound();
 
-  const [sources, assets, blocks, claims, outputs, facts] = await Promise.all([
+  const [sources, assets, blocks, claims, outputs, facts, knowledge] = await Promise.all([
     listSources(project.id),
     listAssets(project.id),
     listContentBlocks(project.id),
     listClaims(project.id),
     listOutputs(project.id),
     listFacts(project.id),
+    listKnowledge(project.id),
   ]);
   const coverage = await getCoverageSnapshot(project, sources, assets);
   const aiStatus = getAiStatus();
+  const figma = figmaStatus();
 
   return (
     <div className="flex flex-col gap-8">
@@ -110,6 +115,13 @@ export default async function ProjectDetailPage({
         provider={aiStatus.provider}
         facts={facts}
         claims={claims}
+      />
+
+      <Phase4Panel
+        projectId={project.id}
+        assets={assets}
+        knowledge={knowledge}
+        figmaConfigured={figma.configured}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">

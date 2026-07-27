@@ -6,7 +6,8 @@ export type PromptId =
   | "question-refinement"
   | "claim-review"
   | "editorial"
-  | "compression";
+  | "compression"
+  | "vision";
 
 export type PromptDefinition = {
   id: PromptId;
@@ -141,6 +142,21 @@ Facts:
 
 Max tokens:
 {{max_tokens}}`,
+  },
+  vision: {
+    id: "vision",
+    version: "v1",
+    task: "Analyze one image asset on demand",
+    template: `You analyze a single project image asset.
+
+Rules:
+- Use only provided metadata and any attached summary.
+- Do not invent metrics, research, or outcomes.
+- Suggest category/phase/description only when grounded.
+- Return JSON matching the vision output schema.
+
+Asset metadata:
+{{asset_metadata}}`,
   },
 };
 

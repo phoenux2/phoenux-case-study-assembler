@@ -28,6 +28,7 @@ import type {
 } from "@/lib/db/block-types";
 import type { ApprovalStatus } from "@/lib/db/types";
 import type { StructuredFactRecord } from "@/lib/db/ai-types";
+import type { KnowledgeEntry } from "@/lib/db/phase4-types";
 
 type LocalDb = {
   profiles: Profile[];
@@ -42,6 +43,7 @@ type LocalDb = {
   evidence: Evidence[];
   outputs: OutputRecord[];
   facts: StructuredFactRecord[];
+  knowledge_entries: KnowledgeEntry[];
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -75,6 +77,7 @@ function emptyDb(): LocalDb {
     evidence: [],
     outputs: [],
     facts: [],
+    knowledge_entries: [],
   };
 }
 
@@ -94,6 +97,7 @@ async function ensureDb(): Promise<LocalDb> {
       evidence: parsed.evidence ?? [],
       outputs: parsed.outputs ?? [],
       facts: parsed.facts ?? [],
+      knowledge_entries: parsed.knowledge_entries ?? [],
     };
   } catch {
     const db = emptyDb();
@@ -656,6 +660,55 @@ export async function upsertLocalFacts(
   }
   await saveDb(db);
   return created;
+}
+
+
+export async function listLocalKnowledge(projectId: string): Promise<KnowledgeEntry[]> {
+  const db = await ensureDb();
+  return db.knowledge_entries
+    .filter((entry) => entry.project_id === projectId)
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+}
+
+export async function replaceLocalKnowledge(
+  projectId: string,
+  entries: Array<Omit<KnowledgeEntry, "id" | "created_at" | "updated_at">>,
+): Promise<KnowledgeEntry[]> {
+  const db = await ensureDb();
+  const timestamp = now();
+  db.knowledge_entries = db.knowledge_entries.filter(
+    (entry) => entry.project_id !== projectId,
+  );
+  const created = entries.map((entry) => ({
+    ...entry,
+    id: randomUUID(),
+    created_at: timestamp,
+    updated_at: timestamp,
+  }));
+  db.knowledge_entries.push(...created);
+  await saveDb(db);
+  return created;
+}
+
+export async function updateLocalAssetVision(
+  assetId: string,
+  projectId: string,
+  patch: Partial<
+    Pick<Asset, "title" | "category" | "phase" | "description" | "caption" | "annotations" | "confidence">
+  >,
+): Promise<Asset | null> {
+  const db = await ensureDb();
+  const index = db.assets.findIndex(
+    (asset) => asset.id === assetId && asset.project_id === projectId,
+  );
+  if (index < 0) return null;
+  db.assets[index] = {
+    ...db.assets[index],
+    ...patch,
+    updated_at: now(),
+  };
+  await saveDb(db);
+  return db.assets[index];
 }
 
 /** Test helper — reset local DB between unit tests. */
