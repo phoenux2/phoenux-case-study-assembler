@@ -514,6 +514,18 @@ export async function listLocalEvidence(claimId: string): Promise<Evidence[]> {
   return db.evidence.filter((item) => item.claim_id === claimId);
 }
 
+export async function listLocalEvidenceForProject(
+  projectId: string,
+): Promise<Evidence[]> {
+  const db = await ensureDb();
+  const claimIds = new Set(
+    db.claims
+      .filter((claim) => claim.project_id === projectId)
+      .map((claim) => claim.id),
+  );
+  return db.evidence.filter((item) => claimIds.has(item.claim_id));
+}
+
 export async function setLocalApproval(input: {
   entity: "content_block" | "claim" | "asset" | "output";
   id: string;

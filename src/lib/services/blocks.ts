@@ -12,6 +12,7 @@ import {
   listLocalClaims,
   listLocalContentBlocks,
   listLocalEvidence,
+  listLocalEvidenceForProject,
   listLocalQuestions,
   listLocalSources,
   replaceLocalClaims,
@@ -114,6 +115,29 @@ export async function listEvidenceForClaim(
     .from("evidence")
     .select("*")
     .eq("claim_id", claimId);
+  if (error) throw error;
+  return (data ?? []) as Evidence[];
+}
+
+export async function listEvidenceForProject(
+  projectId: string,
+): Promise<Evidence[]> {
+  if (getDataMode() === "local") {
+    return listLocalEvidenceForProject(projectId);
+  }
+  const supabase = await createClient();
+  const { data: claims, error: claimsError } = await supabase
+    .from("claims")
+    .select("id")
+    .eq("project_id", projectId);
+  if (claimsError) throw claimsError;
+  const claimIds = (claims ?? []).map((claim) => claim.id as string);
+  if (claimIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("evidence")
+    .select("*")
+    .in("claim_id", claimIds);
   if (error) throw error;
   return (data ?? []) as Evidence[];
 }

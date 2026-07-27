@@ -1,16 +1,17 @@
-# Hardening — navigation, proxy, environment
+# Hardening — hard public export gate
 
 ## Goal
 
-Polish the post-roadmap app for daily use: Next.js proxy migration, clearer navigation, system status, and cloud agent bootstrap.
+Enforce SECURITY.md before public export and output approval:
+Permission → Claim Approval → Asset Approval → Output Approval.
 
 ## Acceptance Criteria
 
-- `src/proxy.ts` replaces deprecated middleware
-- Sticky header + project section anchors
-- System status chips for data/AI/Figma mode
-- `.cursor/environment.json` for install/dev
-- Existing unit + e2e suite still green
+- Public export fails for blocked/internal/restricted referenced assets
+- Referenced assets must be approved
+- Approved claims require evidence; metric claims must be grounded
+- Output approval re-runs the same validation gate
+- Unit tests cover the gate
 
 ## Out of Scope
 

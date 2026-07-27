@@ -2,6 +2,7 @@ import { getDataMode } from "@/lib/config";
 import {
   assembleOutputPayload,
   canPublicExport,
+  validatePublicExport,
 } from "@/lib/blocks/outputs";
 import type {
   OutputRecord,
@@ -17,6 +18,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   listClaims,
   listContentBlocks,
+  listEvidenceForProject,
 } from "@/lib/services/blocks";
 import { listAssets } from "@/lib/services/assets";
 import { getProject } from "@/lib/services/projects";
@@ -54,6 +56,16 @@ export async function getOutput(
   return data as OutputRecord | null;
 }
 
+async function loadExportInputs(projectId: string) {
+  const [blocks, claims, assets, evidence] = await Promise.all([
+    listContentBlocks(projectId),
+    listClaims(projectId),
+    listAssets(projectId),
+    listEvidenceForProject(projectId),
+  ]);
+  return { blocks, claims, assets, evidence };
+}
+
 export async function createOutput(
   projectId: string,
   ownerId: string,
@@ -62,11 +74,8 @@ export async function createOutput(
   const project = await getProject(projectId, ownerId);
   if (!project) return { error: "Project not found" };
 
-  const [blocks, claims, assets] = await Promise.all([
-    listContentBlocks(projectId),
-    listClaims(projectId),
-    listAssets(projectId),
-  ]);
+  const { blocks, claims, assets, evidence } =
+    await loadExportInputs(projectId);
 
   const { payload, validation } = assembleOutputPayload({
     title: project.title,
@@ -74,6 +83,8 @@ export async function createOutput(
     blocks,
     claims,
     assets,
+    evidence,
+    project,
   });
 
   if (!canPublicExport(validation)) {
@@ -121,6 +132,22 @@ export async function setApproval(input: {
 }): Promise<{ ok: boolean; error?: string }> {
   const project = await getProject(input.projectId, input.ownerId);
   if (!project) return { ok: false, error: "Project not found" };
+
+  if (input.entity === "output" && input.approval === "approved") {
+    const { blocks, claims, assets, evidence } = await loadExportInputs(
+      input.projectId,
+    );
+    const validation = validatePublicExport({
+      project,
+      blocks,
+      claims,
+      assets,
+      evidence,
+    });
+    if (!canPublicExport(validation)) {
+      return { ok: false, error: validation.errors.join(" ") };
+    }
+  }
 
   if (getDataMode() === "local") {
     const ok = await setLocalApproval(input);

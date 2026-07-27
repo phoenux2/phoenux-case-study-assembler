@@ -56,11 +56,13 @@ Knowledge Base
 
 Next (hardening)
 
-Proxy/auth session layer
+Proxy/auth session layer ✅
 
-Navigation & section anchors
+Navigation & section anchors ✅
 
-Cloud agent environment bootstrap
+Cloud agent environment bootstrap ✅
+
+Hard public export gate (claims + assets + evidence) ✅
 
 Supabase production wiring (env + migrations)
 
