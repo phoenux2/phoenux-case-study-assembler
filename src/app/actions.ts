@@ -17,6 +17,10 @@ import { listLocalQuestions } from "@/lib/local/store";
 import { getDataMode } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import type { Question } from "@/lib/db/question-types";
+import { rebuildContentBlocks } from "@/lib/services/blocks";
+import { createOutput, setApproval } from "@/lib/services/outputs";
+import type { OutputType } from "@/lib/db/block-types";
+import type { ApprovalStatus } from "@/lib/db/types";
 
 export type ActionResult = {
   ok: boolean;
@@ -184,5 +188,66 @@ export async function answerQuestionAction(
 
   await getCoverageSnapshot(project);
   revalidatePath(`/projects/${projectId}`);
+  return { ok: true };
+}
+
+export async function rebuildBlocksAction(
+  projectId: string,
+): Promise<ActionResult> {
+  const user = await requireSessionUser();
+  await rebuildContentBlocks(projectId, user.id);
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true };
+}
+
+export async function setApprovalAction(
+  projectId: string,
+  entity: "content_block" | "claim" | "asset" | "output",
+  id: string,
+  approval: ApprovalStatus,
+): Promise<ActionResult> {
+  const user = await requireSessionUser();
+  const result = await setApproval({
+    entity,
+    id,
+    projectId,
+    ownerId: user.id,
+    approval,
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath(`/projects/${projectId}`);
+  if (entity === "output") {
+    revalidatePath(`/projects/${projectId}/outputs/${id}`);
+  }
+  return { ok: true };
+}
+
+export async function createOutputAction(
+  projectId: string,
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireSessionUser();
+  const outputType = String(formData.get("output_type") || "") as OutputType;
+  const allowed: OutputType[] = [
+    "website",
+    "linkedin_carousel",
+    "linkedin_post",
+    "upwork",
+    "pdf",
+  ];
+  if (!allowed.includes(outputType)) {
+    return { ok: false, error: "Choose a valid output type" };
+  }
+
+  const result = await createOutput(projectId, user.id, outputType);
+  if (result.error) {
+    return { ok: false, error: result.error };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  if (result.output) {
+    redirect(`/projects/${projectId}/outputs/${result.output.id}`);
+  }
   return { ok: true };
 }

@@ -4,12 +4,13 @@ Internal application for reconstructing projects into reusable case studies.
 
 ## Status
 
-Phase 1 foundation is in progress:
+Phase 1 + Phase 2 foundations are implemented:
 
 - Next.js + TypeScript + Tailwind + shadcn/ui
-- Supabase schema migration + auth-ready clients
+- Projects, sources, assets, adaptive questions (no AI)
+- Deterministic content blocks, claims, review gates, and outputs
+- Website / LinkedIn / Upwork / printable PDF assembly
 - Local JSON mode when Supabase env vars are missing
-- Projects, text sources, file uploads, and image assets
 
 ## Quick start
 

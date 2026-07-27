@@ -6,6 +6,7 @@ import {
   UploadFileForm,
 } from "@/components/projects/source-forms";
 import { QuestionEnginePanel } from "@/components/projects/question-engine";
+import { AssemblyPanel } from "@/components/projects/assembly-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,8 @@ import { listAssets } from "@/lib/services/assets";
 import { getProject } from "@/lib/services/projects";
 import { getCoverageSnapshot } from "@/lib/services/questions";
 import { listSources } from "@/lib/services/sources";
+import { listClaims, listContentBlocks } from "@/lib/services/blocks";
+import { listOutputs } from "@/lib/services/outputs";
 
 export default async function ProjectDetailPage({
   params,
@@ -42,9 +45,12 @@ export default async function ProjectDetailPage({
   const project = await getProject(id, user.id);
   if (!project) notFound();
 
-  const [sources, assets] = await Promise.all([
+  const [sources, assets, blocks, claims, outputs] = await Promise.all([
     listSources(project.id),
     listAssets(project.id),
+    listContentBlocks(project.id),
+    listClaims(project.id),
+    listOutputs(project.id),
   ]);
   const coverage = await getCoverageSnapshot(project, sources, assets);
 
@@ -84,6 +90,14 @@ export default async function ProjectDetailPage({
         projectId={project.id}
         coverage={coverage}
         assets={assets}
+      />
+
+      <AssemblyPanel
+        projectId={project.id}
+        blocks={blocks}
+        claims={claims}
+        assets={assets}
+        outputs={outputs}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">

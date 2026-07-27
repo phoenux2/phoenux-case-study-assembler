@@ -56,3 +56,42 @@ test("question engine asks one adaptive question at a time", async ({
     page.getByText("Who was the primary audience or user?"),
   ).toBeVisible();
 });
+
+test("phase 2 can rebuild blocks, approve, and assemble website output", async ({
+  page,
+}) => {
+  await page.goto("/projects/new");
+  const title = `Phase2 ${Date.now()}`;
+  await page.getByLabel("Project title").fill(title);
+  await page.getByLabel("Summary").fill("Reduce onboarding drop-off");
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await page.getByLabel("Answer").fill("Users abandoned onboarding mid-flow.");
+  await page.getByRole("button", { name: "Save answer" }).click();
+  await page.getByLabel("Product designer").check();
+  await page.getByRole("button", { name: "Save answer" }).click();
+  await page.getByLabel("Answer").fill("New mobile shoppers");
+  await page.getByRole("button", { name: "Save answer" }).click();
+  await page.getByLabel("Yes").check();
+  await page.getByRole("button", { name: "Save answer" }).click();
+  await page.getByLabel("Answer").fill("Activation +22% after redesign");
+  await page.getByRole("button", { name: "Save answer" }).click();
+
+  // Skip optional confidence if it appears later; rebuild now.
+  await page.getByRole("button", { name: "Rebuild blocks" }).click();
+  await expect(page.getByText("Challenge")).toBeVisible();
+  await page.getByRole("button", { name: "Approve" }).first().click();
+
+  // Approve remaining draft blocks quickly
+  for (let i = 0; i < 6; i++) {
+    const approveButtons = page.getByRole("button", { name: "Approve" });
+    const count = await approveButtons.count();
+    if (count === 0) break;
+    await approveButtons.first().click();
+  }
+
+  await page.locator("#output_type").selectOption("website");
+  await page.getByRole("button", { name: "Assemble output" }).click();
+  await expect(page.getByText(/Assembled from approved blocks only/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+});

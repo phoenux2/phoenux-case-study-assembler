@@ -18,6 +18,15 @@ import type {
   CreateQuestionInput,
   Question,
 } from "@/lib/db/question-types";
+import type {
+  Claim,
+  ContentBlock,
+  Evidence,
+  OutputPayload,
+  OutputRecord,
+  OutputType,
+} from "@/lib/db/block-types";
+import type { ApprovalStatus } from "@/lib/db/types";
 
 type LocalDb = {
   profiles: Profile[];
@@ -27,6 +36,10 @@ type LocalDb = {
   questions: Question[];
   answers: Answer[];
   answer_assets: AnswerAsset[];
+  content_blocks: ContentBlock[];
+  claims: Claim[];
+  evidence: Evidence[];
+  outputs: OutputRecord[];
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -55,6 +68,10 @@ function emptyDb(): LocalDb {
     questions: [],
     answers: [],
     answer_assets: [],
+    content_blocks: [],
+    claims: [],
+    evidence: [],
+    outputs: [],
   };
 }
 
@@ -69,6 +86,10 @@ async function ensureDb(): Promise<LocalDb> {
       questions: parsed.questions ?? [],
       answers: parsed.answers ?? [],
       answer_assets: parsed.answer_assets ?? [],
+      content_blocks: parsed.content_blocks ?? [],
+      claims: parsed.claims ?? [],
+      evidence: parsed.evidence ?? [],
+      outputs: parsed.outputs ?? [],
     };
   } catch {
     const db = emptyDb();
@@ -387,6 +408,205 @@ export async function updateLocalAssetsPermission(
       : asset,
   );
   await saveDb(db);
+}
+
+export async function listLocalContentBlocks(
+  projectId: string,
+): Promise<ContentBlock[]> {
+  const db = await ensureDb();
+  return db.content_blocks
+    .filter((block) => block.project_id === projectId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export async function replaceLocalContentBlocks(
+  projectId: string,
+  blocks: Array<Omit<ContentBlock, "id" | "created_at" | "updated_at">>,
+): Promise<ContentBlock[]> {
+  const db = await ensureDb();
+  const timestamp = now();
+  db.content_blocks = db.content_blocks.filter(
+    (block) => block.project_id !== projectId,
+  );
+  const created = blocks.map((block) => ({
+    ...block,
+    id: randomUUID(),
+    created_at: timestamp,
+    updated_at: timestamp,
+  }));
+  db.content_blocks.push(...created);
+  await saveDb(db);
+  return created;
+}
+
+export async function listLocalClaims(projectId: string): Promise<Claim[]> {
+  const db = await ensureDb();
+  return db.claims
+    .filter((claim) => claim.project_id === projectId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export async function replaceLocalClaims(
+  projectId: string,
+  claims: Array<{
+    claim_text: string;
+    confidence: Claim["confidence"];
+    evidence_summary: string;
+    source_id?: string | null;
+    asset_id?: string | null;
+  }>,
+): Promise<Claim[]> {
+  const db = await ensureDb();
+  const timestamp = now();
+  const existingIds = new Set(
+    db.claims.filter((claim) => claim.project_id === projectId).map((c) => c.id),
+  );
+  db.evidence = db.evidence.filter((item) => !existingIds.has(item.claim_id));
+  db.claims = db.claims.filter((claim) => claim.project_id !== projectId);
+
+  const created: Claim[] = [];
+  for (const claim of claims) {
+    const record: Claim = {
+      id: randomUUID(),
+      project_id: projectId,
+      claim_text: claim.claim_text,
+      confidence: claim.confidence,
+      approval: "draft",
+      provenance: {
+        source: "assembled-from-answers",
+        method: "deterministic",
+      },
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+    created.push(record);
+    db.claims.push(record);
+    db.evidence.push({
+      id: randomUUID(),
+      claim_id: record.id,
+      source_id: claim.source_id ?? null,
+      asset_id: claim.asset_id ?? null,
+      summary: claim.evidence_summary,
+      confidence: claim.confidence,
+      approval: "draft",
+      provenance: {
+        source: "assembled-from-answers",
+        method: "deterministic",
+      },
+      created_at: timestamp,
+      updated_at: timestamp,
+    });
+  }
+  await saveDb(db);
+  return created;
+}
+
+export async function listLocalEvidence(claimId: string): Promise<Evidence[]> {
+  const db = await ensureDb();
+  return db.evidence.filter((item) => item.claim_id === claimId);
+}
+
+export async function setLocalApproval(input: {
+  entity: "content_block" | "claim" | "asset" | "output";
+  id: string;
+  projectId: string;
+  approval: ApprovalStatus;
+}): Promise<boolean> {
+  const db = await ensureDb();
+  const timestamp = now();
+
+  if (input.entity === "content_block") {
+    const index = db.content_blocks.findIndex(
+      (block) => block.id === input.id && block.project_id === input.projectId,
+    );
+    if (index < 0) return false;
+    db.content_blocks[index] = {
+      ...db.content_blocks[index],
+      approval: input.approval,
+      updated_at: timestamp,
+    };
+  } else if (input.entity === "claim") {
+    const index = db.claims.findIndex(
+      (claim) => claim.id === input.id && claim.project_id === input.projectId,
+    );
+    if (index < 0) return false;
+    db.claims[index] = {
+      ...db.claims[index],
+      approval: input.approval,
+      updated_at: timestamp,
+    };
+  } else if (input.entity === "asset") {
+    const index = db.assets.findIndex(
+      (asset) => asset.id === input.id && asset.project_id === input.projectId,
+    );
+    if (index < 0) return false;
+    db.assets[index] = {
+      ...db.assets[index],
+      approval: input.approval,
+      updated_at: timestamp,
+    };
+  } else {
+    const index = db.outputs.findIndex(
+      (output) =>
+        output.id === input.id && output.project_id === input.projectId,
+    );
+    if (index < 0) return false;
+    db.outputs[index] = {
+      ...db.outputs[index],
+      approval: input.approval,
+      updated_at: timestamp,
+    };
+  }
+
+  await saveDb(db);
+  return true;
+}
+
+export async function listLocalOutputs(
+  projectId: string,
+): Promise<OutputRecord[]> {
+  const db = await ensureDb();
+  return db.outputs
+    .filter((output) => output.project_id === projectId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function getLocalOutput(
+  outputId: string,
+  projectId: string,
+): Promise<OutputRecord | null> {
+  const db = await ensureDb();
+  return (
+    db.outputs.find(
+      (output) => output.id === outputId && output.project_id === projectId,
+    ) ?? null
+  );
+}
+
+export async function createLocalOutput(input: {
+  project_id: string;
+  output_type: OutputType;
+  payload: OutputPayload;
+}): Promise<OutputRecord> {
+  const db = await ensureDb();
+  const timestamp = now();
+  const output: OutputRecord = {
+    id: randomUUID(),
+    project_id: input.project_id,
+    output_type: input.output_type,
+    payload: input.payload,
+    confidence: "medium",
+    approval: "draft",
+    provenance: {
+      source: "assembly-engine",
+      method: "deterministic",
+    },
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+  db.outputs.push(output);
+  await saveDb(db);
+  return output;
 }
 
 /** Test helper — reset local DB between unit tests. */

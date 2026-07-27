@@ -1,36 +1,36 @@
-# Phase 1 — Question engine
+# Phase 2 — Content blocks, outputs, review, PDF
 
 ## Goal
 
-Add deterministic adaptive questions (no AI) so projects gather missing coverage one question at a time.
+Assemble reusable content blocks from answers, gate exports with review, and generate platform outputs including printable PDF.
 
 ## Context
 
-- QUESTION_ENGINE.md
-- DATABASE.md
-- ROADMAP.md Phase 1
-- Existing projects / sources / assets scaffold
+- CONTENT_BLOCKS.md
+- OUTPUTS.md
+- SECURITY.md
+- ROADMAP.md Phase 2
 
 ## Acceptance Criteria
 
-- Coverage model selects the next applicable gap only
-- Every question explains why it is asked
-- Answers persist with provenance and optional asset links
-- Project detail shows coverage progress and one question panel
-- Unit + Playwright coverage for adaptive flow
+- Rebuild creates deterministic blocks/claims from answers
+- Approve/reject for blocks, claims, assets, outputs
+- Assemble website / LinkedIn / Upwork / PDF from approved blocks only
+- Blocked assets cannot export
+- Print/Save PDF available on PDF and website outputs
 
 ## Constraints
 
-- No AI / no giant forms
-- Deterministic coverage only
-- Images remain reusable assets
+- No AI editorial writing
+- Outputs introduce no new facts
+- Provenance preserved on assembled records
 
 ## Tests
 
-- Unit: coverage evaluation + answer parsing
-- Playwright: answer problem → role → audience
+- Unit: block assembly + export validation
+- Playwright: rebuild → approve → assemble website
 
 ## Out of Scope
 
-- AI gap detection / question refinement
-- Content blocks and exports
+- AI extraction / gap detection / editorial polish
+- Vision / Figma
