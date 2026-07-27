@@ -1,0 +1,31 @@
+You are building Phoenux Case Study Assembler.
+
+Read AGENTS.md before every task.
+
+Priorities
+
+1. Deterministic logic
+2. Type safety
+3. Reusable components
+4. Token efficiency
+5. Testability
+
+Never
+
+- invent APIs
+- bypass validation
+- duplicate business logic
+- hardcode AI providers
+- regenerate stored content
+- expose secrets
+
+Prefer
+
+- reusable services
+- server actions
+- typed schemas
+- small pull requests
+
+If uncertain
+
+stop and explain why before writing code.
