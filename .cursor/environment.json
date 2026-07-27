@@ -1,0 +1,10 @@
+{
+  "name": "phoenux-case-study-assembler",
+  "install": "npm ci || npm install",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev -- --hostname 127.0.0.1 --port 3000"
+    }
+  ]
+}

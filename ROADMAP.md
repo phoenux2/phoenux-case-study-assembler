@@ -1,6 +1,6 @@
 # Roadmap
 
-Phase 1
+Phase 1 — Foundation ✅
 
 Authentication
 
@@ -16,7 +16,7 @@ No AI
 
 ---
 
-Phase 2
+Phase 2 — Assembly ✅
 
 Content Blocks
 
@@ -28,7 +28,7 @@ PDF
 
 ---
 
-Phase 3
+Phase 3 — AI pipeline ✅
 
 Extraction
 
@@ -42,7 +42,7 @@ Editorial
 
 ---
 
-Phase 4
+Phase 4 — Integrations ✅
 
 Vision
 
@@ -51,3 +51,17 @@ Figma
 Retrieval
 
 Knowledge Base
+
+---
+
+Next (hardening)
+
+Proxy/auth session layer
+
+Navigation & section anchors
+
+Cloud agent environment bootstrap
+
+Supabase production wiring (env + migrations)
+
+UX polish / accessibility pass

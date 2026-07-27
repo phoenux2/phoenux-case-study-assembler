@@ -1,4 +1,5 @@
 import { ProjectList } from "@/components/projects/project-list";
+import { SystemStatus } from "@/components/system-status";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getSessionUser } from "@/lib/auth/session";
 import { getDataMode } from "@/lib/config";
@@ -15,14 +16,17 @@ export default async function ProjectsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-3xl font-semibold tracking-tight">
-          Projects
-        </h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Collect evidence first. Questions, blocks, and exports come later —
-          Phase 1 is projects, uploads, and reusable assets.
-        </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight">
+            Projects
+          </h1>
+          <p className="max-w-2xl text-muted-foreground">
+            Reconstruct projects into reusable case studies: collect evidence,
+            answer adaptive questions, assemble blocks, then export.
+          </p>
+        </div>
+        <SystemStatus />
       </div>
 
       {mode === "local" ? (

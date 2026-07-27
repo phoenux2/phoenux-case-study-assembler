@@ -9,6 +9,7 @@ import { QuestionEnginePanel } from "@/components/projects/question-engine";
 import { AssemblyPanel } from "@/components/projects/assembly-panel";
 import { AiPipelinePanel } from "@/components/projects/ai-pipeline-panel";
 import { Phase4Panel } from "@/components/projects/phase4-panel";
+import { ProjectSectionNav } from "@/components/projects/section-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,12 +96,17 @@ export default async function ProjectDetailPage({
         </Button>
       </div>
 
+      <ProjectSectionNav projectId={project.id} />
+
+      <section id="questions" className="scroll-mt-32">
       <QuestionEnginePanel
         projectId={project.id}
         coverage={coverage}
         assets={assets}
       />
+      </section>
 
+      <section id="assembly" className="scroll-mt-32">
       <AssemblyPanel
         projectId={project.id}
         blocks={blocks}
@@ -108,7 +114,9 @@ export default async function ProjectDetailPage({
         assets={assets}
         outputs={outputs}
       />
+      </section>
 
+      <section id="ai-pipeline" className="scroll-mt-32">
       <AiPipelinePanel
         projectId={project.id}
         aiEnabled={aiStatus.enabled}
@@ -116,13 +124,16 @@ export default async function ProjectDetailPage({
         facts={facts}
         claims={claims}
       />
+      </section>
 
+      <section id="phase4" className="scroll-mt-32">
       <Phase4Panel
         projectId={project.id}
         assets={assets}
         knowledge={knowledge}
         figmaConfigured={figma.configured}
       />
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -152,7 +163,7 @@ export default async function ProjectDetailPage({
 
       <Separator />
 
-      <section className="flex flex-col gap-4">
+      <section id="sources" className="flex scroll-mt-32 flex-col gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="font-heading text-xl font-semibold">Sources</h2>
           <p className="text-sm text-muted-foreground">
@@ -191,7 +202,7 @@ export default async function ProjectDetailPage({
         )}
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section id="assets" className="flex scroll-mt-32 flex-col gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="font-heading text-xl font-semibold">Assets</h2>
           <p className="text-sm text-muted-foreground">

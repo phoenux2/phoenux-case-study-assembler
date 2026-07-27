@@ -1,29 +1,18 @@
-# Phase 4 — Vision, Figma, Retrieval, Knowledge Base
+# Hardening — navigation, proxy, environment
 
 ## Goal
 
-Add on-demand vision, Figma import, and project knowledge retrieval.
-
-## Context
-
-- IMAGE_ENGINE.md
-- ROADMAP.md Phase 4
-- AI_PIPELINE.md
+Polish the post-roadmap app for daily use: Next.js proxy migration, clearer navigation, system status, and cloud agent bootstrap.
 
 ## Acceptance Criteria
 
-- Vision runs per asset only (never all uploads)
-- Figma URL/key import creates source + frame assets (API optional)
-- Knowledge base rebuilds from facts/sources/assets/blocks/claims
-- Retrieval returns ranked hits deterministically
-- Works without AI/Figma tokens
-
-## Tests
-
-- Unit: vision/figma/retrieval helpers
-- Playwright: import → analyze → search
+- `src/proxy.ts` replaces deprecated middleware
+- Sticky header + project section anchors
+- System status chips for data/AI/Figma mode
+- `.cursor/environment.json` for install/dev
+- Existing unit + e2e suite still green
 
 ## Out of Scope
 
-- Full embedding vector DB
-- Auto-vision on every upload
+- Production Supabase provisioning
+- Embedding-based retrieval

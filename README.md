@@ -11,6 +11,7 @@ Phase 1–4 foundations are implemented:
 - AI pipeline with deterministic fallbacks + cache
 - On-demand vision, Figma import, knowledge base retrieval
 - Local JSON mode when Supabase env vars are missing
+- Hardening: Next.js proxy, section navigation, system status, cloud env bootstrap
 
 ## Quick start
 
