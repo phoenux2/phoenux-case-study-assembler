@@ -5,6 +5,7 @@ import {
   AddTextSourceForm,
   UploadFileForm,
 } from "@/components/projects/source-forms";
+import { QuestionEnginePanel } from "@/components/projects/question-engine";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ import {
 import { getSessionUser } from "@/lib/auth/session";
 import { listAssets } from "@/lib/services/assets";
 import { getProject } from "@/lib/services/projects";
+import { getCoverageSnapshot } from "@/lib/services/questions";
 import { listSources } from "@/lib/services/sources";
 
 export default async function ProjectDetailPage({
@@ -44,6 +46,7 @@ export default async function ProjectDetailPage({
     listSources(project.id),
     listAssets(project.id),
   ]);
+  const coverage = await getCoverageSnapshot(project, sources, assets);
 
   return (
     <div className="flex flex-col gap-8">
@@ -55,6 +58,9 @@ export default async function ProjectDetailPage({
             </h1>
             <Badge variant="outline">{project.approval}</Badge>
             <Badge variant="secondary">{project.confidence}</Badge>
+            <Badge variant="outline">
+              {Math.round(coverage.score * 100)}% coverage
+            </Badge>
           </div>
           {project.client_name ? (
             <p className="text-muted-foreground">{project.client_name}</p>
@@ -65,10 +71,20 @@ export default async function ProjectDetailPage({
             </p>
           ) : null}
         </div>
-        <Button variant="outline" render={<Link href="/projects" />} nativeButton={false}>
+        <Button
+          variant="outline"
+          render={<Link href="/projects" />}
+          nativeButton={false}
+        >
           All projects
         </Button>
       </div>
+
+      <QuestionEnginePanel
+        projectId={project.id}
+        coverage={coverage}
+        assets={assets}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

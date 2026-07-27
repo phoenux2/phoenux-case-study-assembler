@@ -8,6 +8,15 @@ import { createProjectSchema, createTextSourceSchema } from "@/lib/db/schemas";
 import { getProject, createProject } from "@/lib/services/projects";
 import { createSource } from "@/lib/services/sources";
 import { createAsset, isImageMimeType } from "@/lib/services/assets";
+import {
+  getCoverageSnapshot,
+  parseAnswerFromFormData,
+  submitAnswer,
+} from "@/lib/services/questions";
+import { listLocalQuestions } from "@/lib/local/store";
+import { getDataMode } from "@/lib/config";
+import { createClient } from "@/lib/supabase/server";
+import type { Question } from "@/lib/db/question-types";
 
 export type ActionResult = {
   ok: boolean;
@@ -121,6 +130,59 @@ export async function uploadFileAction(
     });
   }
 
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true };
+}
+
+async function getQuestion(
+  projectId: string,
+  questionId: string,
+): Promise<Question | null> {
+  if (getDataMode() === "local") {
+    const questions = await listLocalQuestions(projectId);
+    return questions.find((question) => question.id === questionId) ?? null;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("questions")
+    .select("*")
+    .eq("id", questionId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as Question | null;
+}
+
+export async function answerQuestionAction(
+  projectId: string,
+  questionId: string,
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireSessionUser();
+  const project = await getProject(projectId, user.id);
+  if (!project) return { ok: false, error: "Project not found" };
+
+  const question = await getQuestion(projectId, questionId);
+  if (!question) return { ok: false, error: "Question not found" };
+
+  const parsed = parseAnswerFromFormData(question, formData);
+  if ("error" in parsed) {
+    return { ok: false, error: parsed.error };
+  }
+
+  await submitAnswer(user.id, {
+    question_id: question.id,
+    project_id: projectId,
+    value: parsed.value,
+    confidence:
+      parsed.value.confidence ??
+      (typeof parsed.value.boolean === "boolean" ? "high" : "medium"),
+    asset_links: parsed.asset_links,
+  });
+
+  await getCoverageSnapshot(project);
   revalidatePath(`/projects/${projectId}`);
   return { ok: true };
 }

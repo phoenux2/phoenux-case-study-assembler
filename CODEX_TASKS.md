@@ -1,42 +1,36 @@
-# Phase 1 — Application scaffold
+# Phase 1 — Question engine
 
 ## Goal
 
-Stand up the Phase 1 foundation: Next.js app, database schema, auth-ready clients, projects, sources, and assets.
+Add deterministic adaptive questions (no AI) so projects gather missing coverage one question at a time.
 
 ## Context
 
-- PRODUCT.md
-- ARCHITECTURE.md
+- QUESTION_ENGINE.md
 - DATABASE.md
-- IMAGE_ENGINE.md
-- ROADMAP.md (Phase 1)
-- AGENTS.md
+- ROADMAP.md Phase 1
+- Existing projects / sources / assets scaffold
 
 ## Acceptance Criteria
 
-- App runs with `npm run dev`
-- Works without Supabase via local JSON mode under `.data/`
-- User can create a project, add a text source, and upload a file
-- Image uploads create reusable asset records with permission metadata
-- Supabase SQL migration covers Phase 1 tables + RLS
-- `npm run typecheck`, `npm run lint`, `npm test`, and `npm run test:e2e` pass
+- Coverage model selects the next applicable gap only
+- Every question explains why it is asked
+- Answers persist with provenance and optional asset links
+- Project detail shows coverage progress and one question panel
+- Unit + Playwright coverage for adaptive flow
 
 ## Constraints
 
-- No AI features in Phase 1
-- Deterministic summaries only
-- Provenance on created records
-- Images are assets, not page-specific files
+- No AI / no giant forms
+- Deterministic coverage only
+- Images remain reusable assets
 
 ## Tests
 
-- Unit: schemas, summarization, local store
-- Playwright: create project + text source
+- Unit: coverage evaluation + answer parsing
+- Playwright: answer problem → role → audience
 
 ## Out of Scope
 
-- Question engine UI
-- Content blocks / outputs
-- Extraction / gap detection / editorial AI
-- Vision / Figma
+- AI gap detection / question refinement
+- Content blocks and exports

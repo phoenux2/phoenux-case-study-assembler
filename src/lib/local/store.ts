@@ -11,12 +11,22 @@ import type {
   Project,
   Source,
 } from "@/lib/db/types";
+import type {
+  Answer,
+  AnswerAsset,
+  CreateAnswerInput,
+  CreateQuestionInput,
+  Question,
+} from "@/lib/db/question-types";
 
 type LocalDb = {
   profiles: Profile[];
   projects: Project[];
   sources: Source[];
   assets: Asset[];
+  questions: Question[];
+  answers: Answer[];
+  answer_assets: AnswerAsset[];
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -42,6 +52,9 @@ function emptyDb(): LocalDb {
     projects: [],
     sources: [],
     assets: [],
+    questions: [],
+    answers: [],
+    answer_assets: [],
   };
 }
 
@@ -49,7 +62,14 @@ async function ensureDb(): Promise<LocalDb> {
   await fs.mkdir(DATA_DIR, { recursive: true });
   try {
     const raw = await fs.readFile(DB_PATH, "utf8");
-    return JSON.parse(raw) as LocalDb;
+    const parsed = JSON.parse(raw) as Partial<LocalDb>;
+    return {
+      ...emptyDb(),
+      ...parsed,
+      questions: parsed.questions ?? [],
+      answers: parsed.answers ?? [],
+      answer_assets: parsed.answer_assets ?? [],
+    };
   } catch {
     const db = emptyDb();
     await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
@@ -229,6 +249,144 @@ export async function updateLocalAsset(
   };
   await saveDb(db);
   return db.assets[index];
+}
+
+export async function listLocalQuestions(projectId: string): Promise<Question[]> {
+  const db = await ensureDb();
+  return db.questions
+    .filter((question) => question.project_id === projectId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export async function getLocalQuestionByField(
+  projectId: string,
+  fieldKey: string,
+): Promise<Question | null> {
+  const db = await ensureDb();
+  return (
+    db.questions.find(
+      (question) =>
+        question.project_id === projectId && question.field_key === fieldKey,
+    ) ?? null
+  );
+}
+
+export async function createLocalQuestion(
+  input: CreateQuestionInput,
+): Promise<Question> {
+  const db = await ensureDb();
+  const existing = db.questions.find(
+    (question) =>
+      question.project_id === input.project_id &&
+      question.field_key === input.field_key,
+  );
+  if (existing) return existing;
+
+  const timestamp = now();
+  const question: Question = {
+    id: randomUUID(),
+    project_id: input.project_id,
+    field_key: input.field_key,
+    question_type: input.question_type,
+    prompt: input.prompt,
+    why: input.why ?? null,
+    options: input.options ?? [],
+    status: "open",
+    confidence: "unknown",
+    approval: "draft",
+    provenance: {
+      source: "coverage-model",
+      method: "deterministic",
+    },
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+  db.questions.push(question);
+  await saveDb(db);
+  return question;
+}
+
+export async function listLocalAnswers(projectId: string): Promise<Answer[]> {
+  const db = await ensureDb();
+  return db.answers
+    .filter((answer) => answer.project_id === projectId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function createLocalAnswer(
+  userId: string,
+  input: CreateAnswerInput,
+): Promise<Answer> {
+  const db = await ensureDb();
+  const timestamp = now();
+  const answer: Answer = {
+    id: randomUUID(),
+    question_id: input.question_id,
+    project_id: input.project_id,
+    answered_by: userId,
+    value: input.value,
+    confidence: input.confidence ?? "medium",
+    approval: "draft",
+    provenance: {
+      source: "user",
+      method: "user",
+      created_by: userId,
+    },
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+  db.answers.push(answer);
+
+  const questionIndex = db.questions.findIndex(
+    (question) => question.id === input.question_id,
+  );
+  if (questionIndex >= 0) {
+    db.questions[questionIndex] = {
+      ...db.questions[questionIndex],
+      status: "answered",
+      updated_at: timestamp,
+    };
+  }
+
+  for (const link of input.asset_links ?? []) {
+    db.answer_assets.push({
+      answer_id: answer.id,
+      asset_id: link.asset_id,
+      role: link.role,
+    });
+  }
+
+  await saveDb(db);
+  return answer;
+}
+
+export async function updateLocalProjectConfidence(
+  projectId: string,
+  confidence: Project["confidence"],
+): Promise<void> {
+  const db = await ensureDb();
+  const index = db.projects.findIndex((project) => project.id === projectId);
+  if (index < 0) return;
+  db.projects[index] = {
+    ...db.projects[index],
+    confidence,
+    updated_at: now(),
+  };
+  await saveDb(db);
+}
+
+export async function updateLocalAssetsPermission(
+  projectId: string,
+  permission: Asset["permission"],
+): Promise<void> {
+  const db = await ensureDb();
+  const timestamp = now();
+  db.assets = db.assets.map((asset) =>
+    asset.project_id === projectId && asset.permission === "internal"
+      ? { ...asset, permission, updated_at: timestamp }
+      : asset,
+  );
+  await saveDb(db);
 }
 
 /** Test helper — reset local DB between unit tests. */
