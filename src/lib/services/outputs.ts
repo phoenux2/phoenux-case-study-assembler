@@ -4,7 +4,12 @@ import {
   canPublicExport,
   validatePublicExport,
 } from "@/lib/blocks/outputs";
+import {
+  derivePayloadFromLayout,
+  layoutFromLegacyPayload,
+} from "@/lib/blocks/layout";
 import type {
+  OutputLayout,
   OutputRecord,
   OutputType,
 } from "@/lib/db/block-types";
@@ -13,6 +18,7 @@ import {
   getLocalOutput,
   listLocalOutputs,
   setLocalApproval,
+  updateLocalOutputPayload,
 } from "@/lib/local/store";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -121,6 +127,110 @@ export async function createOutput(
     .single();
   if (error) throw error;
   return { output: data as OutputRecord, warnings: validation.warnings };
+}
+
+/**
+ * Persist a tweaked channel layout and re-derive the render payload.
+ * Resets output approval to draft so publish re-checks the gate.
+ */
+export async function updateOutputLayout(input: {
+  projectId: string;
+  ownerId: string;
+  outputId: string;
+  layout: OutputLayout;
+}): Promise<{ output?: OutputRecord; error?: string }> {
+  const project = await getProject(input.projectId, input.ownerId);
+  if (!project) return { error: "Project not found" };
+
+  const existing = await getOutput(input.outputId, input.projectId);
+  if (!existing) return { error: "Output not found" };
+
+  const blocks = await listContentBlocks(input.projectId);
+  const claims = await listClaims(input.projectId);
+  const layout: OutputLayout = {
+    ...input.layout,
+    output_type: existing.output_type,
+  };
+
+  const includedBlockIds = new Set(
+    layout.slots.filter((slot) => slot.included).map((slot) => slot.block_id),
+  );
+  const missing = [...includedBlockIds].filter(
+    (id) => !blocks.some((block) => block.id === id),
+  );
+  if (missing.length > 0) {
+    return { error: `Layout references missing blocks: ${missing.join(", ")}` };
+  }
+
+  const unapprovedIncluded = blocks.filter(
+    (block) =>
+      includedBlockIds.has(block.id) && block.approval !== "approved",
+  );
+  if (unapprovedIncluded.length > 0) {
+    return {
+      error: `Included blocks must be approved: ${unapprovedIncluded
+        .map((block) => block.title || block.block_type)
+        .join(", ")}`,
+    };
+  }
+
+  let payload = derivePayloadFromLayout({
+    title: existing.payload.title || project.title,
+    layout,
+    blocks,
+    warnings: existing.payload.warnings ?? [],
+  });
+
+  const approvedClaims = claims.filter(
+    (claim) => claim.approval === "approved",
+  );
+  if (approvedClaims.length > 0) {
+    payload = {
+      ...payload,
+      sections: [
+        ...payload.sections,
+        {
+          heading: "Supported claims",
+          body: approvedClaims.map((claim) => claim.claim_text).join("\n"),
+          block_ids: [],
+        },
+      ],
+    };
+  }
+
+  if (getDataMode() === "local") {
+    const output = await updateLocalOutputPayload(
+      input.outputId,
+      input.projectId,
+      payload,
+      { resetApproval: true },
+    );
+    return output
+      ? { output }
+      : { error: "Failed to update output layout" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("outputs")
+    .update({
+      payload,
+      approval: "draft",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.outputId)
+    .eq("project_id", input.projectId)
+    .select("*")
+    .single();
+  if (error) return { error: error.message };
+  return { output: data as OutputRecord };
+}
+
+export function resolveOutputLayout(output: OutputRecord): OutputLayout {
+  return (
+    output.payload.layout ??
+    layoutFromLegacyPayload(output.output_type, output.payload)
+  );
 }
 
 export async function setApproval(input: {

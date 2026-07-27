@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { OutputActions } from "@/components/projects/output-actions";
+import { OutputComposer } from "@/components/projects/output-composer";
 import { getSessionUser } from "@/lib/auth/session";
 import { getProject } from "@/lib/services/projects";
-import { getOutput } from "@/lib/services/outputs";
-import { OutputActions } from "@/components/projects/output-actions";
+import { getOutput, resolveOutputLayout } from "@/lib/services/outputs";
+import { listContentBlocks } from "@/lib/services/blocks";
 
 export default async function OutputDetailPage({
   params,
@@ -24,7 +26,10 @@ export default async function OutputDetailPage({
   const output = await getOutput(outputId, project.id);
   if (!output) notFound();
 
+  const blocks = await listContentBlocks(project.id);
+  const layout = resolveOutputLayout(output);
   const isPdf = output.output_type === "pdf";
+  const locked = output.approval === "approved";
 
   return (
     <div className="flex flex-col gap-8">
@@ -38,7 +43,8 @@ export default async function OutputDetailPage({
             <Badge variant="outline">{output.approval}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Assembled from approved blocks only. No new facts were introduced.
+            Assembled from Q&amp;A blocks. Reorder and polish below — provenance
+            stays linked.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -66,10 +72,20 @@ export default async function OutputDetailPage({
         </div>
       ) : null}
 
+      <div className="print:hidden">
+        <OutputComposer
+          projectId={project.id}
+          outputId={output.id}
+          layout={layout}
+          blocks={blocks}
+          locked={locked}
+        />
+      </div>
+
+      <Separator className="print:hidden" />
+
       <article
-        className={`flex flex-col gap-8 ${
-          isPdf ? "print:gap-10" : ""
-        }`}
+        className={`flex flex-col gap-8 ${isPdf ? "print:gap-10" : ""}`}
       >
         <header className="hidden print:block">
           <h1 className="font-heading text-3xl font-semibold">
@@ -79,6 +95,10 @@ export default async function OutputDetailPage({
             Phoenux Case Study Assembler · {output.output_type}
           </p>
         </header>
+
+        <h2 className="font-heading text-lg font-semibold print:hidden">
+          Preview
+        </h2>
 
         {output.payload.slides?.length ? (
           <div className="grid gap-4 md:grid-cols-2">

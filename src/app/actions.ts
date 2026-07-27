@@ -18,8 +18,8 @@ import { getDataMode } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import type { Question } from "@/lib/db/question-types";
 import { rebuildContentBlocks } from "@/lib/services/blocks";
-import { createOutput, setApproval } from "@/lib/services/outputs";
-import type { OutputType } from "@/lib/db/block-types";
+import { createOutput, setApproval, updateOutputLayout } from "@/lib/services/outputs";
+import type { OutputLayout, OutputType } from "@/lib/db/block-types";
 import type { ApprovalStatus } from "@/lib/db/types";
 import {
   getAiStatus,
@@ -265,6 +265,24 @@ export async function createOutputAction(
   if (result.output) {
     redirect(`/projects/${projectId}/outputs/${result.output.id}`);
   }
+  return { ok: true };
+}
+
+export async function updateOutputLayoutAction(
+  projectId: string,
+  outputId: string,
+  layout: OutputLayout,
+): Promise<ActionResult> {
+  const user = await requireSessionUser();
+  const result = await updateOutputLayout({
+    projectId,
+    ownerId: user.id,
+    outputId,
+    layout,
+  });
+  if (result.error) return { ok: false, error: result.error };
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/outputs/${outputId}`);
   return { ok: true };
 }
 

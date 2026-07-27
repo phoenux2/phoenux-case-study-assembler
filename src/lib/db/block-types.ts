@@ -81,11 +81,32 @@ export type OutputSection = {
   asset_ids?: string[];
 };
 
+/**
+ * Mutable channel layout. Canonical blocks stay the source of truth;
+ * slots only compose/reorder/include them (and optional light copy polish).
+ */
+export type OutputLayoutSlot = {
+  id: string;
+  block_id: string;
+  included: boolean;
+  order: number;
+  override_heading?: string | null;
+  override_text?: string | null;
+  asset_ids?: string[];
+};
+
+export type OutputLayout = {
+  output_type: OutputType;
+  slots: OutputLayoutSlot[];
+};
+
 export type OutputPayload = {
   title: string;
   sections: OutputSection[];
   slides?: Array<{ title: string; body: string; block_ids: string[] }>;
   warnings: string[];
+  /** Channel layout used to derive sections/slides; editable after assemble. */
+  layout?: OutputLayout;
 };
 
 export type OutputRecord = {

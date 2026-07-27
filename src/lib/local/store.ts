@@ -629,6 +629,28 @@ export async function createLocalOutput(input: {
   return output;
 }
 
+export async function updateLocalOutputPayload(
+  outputId: string,
+  projectId: string,
+  payload: OutputPayload,
+  options?: { resetApproval?: boolean },
+): Promise<OutputRecord | null> {
+  const db = await ensureDb();
+  const index = db.outputs.findIndex(
+    (output) => output.id === outputId && output.project_id === projectId,
+  );
+  if (index < 0) return null;
+  const timestamp = now();
+  db.outputs[index] = {
+    ...db.outputs[index],
+    payload,
+    approval: options?.resetApproval ? "draft" : db.outputs[index].approval,
+    updated_at: timestamp,
+  };
+  await saveDb(db);
+  return db.outputs[index];
+}
+
 
 export async function listLocalFacts(projectId: string): Promise<StructuredFactRecord[]> {
   const db = await ensureDb();

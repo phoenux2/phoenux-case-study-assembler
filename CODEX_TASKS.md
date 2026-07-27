@@ -1,19 +1,19 @@
-# Hardening — hard public export gate
+# Output layout composer
 
 ## Goal
 
-Enforce SECURITY.md before public export and output approval:
-Permission → Claim Approval → Asset Approval → Output Approval.
+After Q&A assembles blocks, users can tweak channel outputs via drag-reorder, include/exclude, and light copy polish — without inventing facts or losing provenance.
 
 ## Acceptance Criteria
 
-- Public export fails for blocked/internal/restricted referenced assets
-- Referenced assets must be approved
-- Approved claims require evidence; metric claims must be grounded
-- Output approval re-runs the same validation gate
-- Unit tests cover the gate
+- Outputs store an editable `layout.slots` recipe linked to `block_id`
+- Render payload is derived from layout + current block bodies
+- Drag-and-drop reorder, include toggles, and polish sheet persist
+- Saving layout resets output approval to draft
+- Unit tests cover seed / reorder / derive
 
 ## Out of Scope
 
-- Production Supabase provisioning
-- Embedding-based retrieval
+- Freeform canvas / absolute positioning
+- AI rewrite during layout edits
+- Provenance invalidation cascade (separate P0 item)

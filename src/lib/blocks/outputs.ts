@@ -5,9 +5,12 @@ import type {
   Evidence,
   ExportValidation,
   OutputPayload,
-  OutputSection,
   OutputType,
 } from "@/lib/db/block-types";
+import {
+  derivePayloadFromLayout,
+  seedOutputLayout,
+} from "@/lib/blocks/layout";
 
 const METRIC_PATTERN =
   /(?:\+|-)?\d+(?:\.\d+)?%|\b\d+\s*(?:users|customers|signups|revenue|conversion)\b/i;
@@ -18,15 +21,6 @@ function approvedBlocks(blocks: ContentBlock[]): ContentBlock[] {
 
 function approvedClaims(claims: Claim[]): Claim[] {
   return claims.filter((claim) => claim.approval === "approved");
-}
-
-function sectionFromBlock(block: ContentBlock): OutputSection {
-  return {
-    heading: block.title || block.block_type,
-    body: block.body.text || block.body.metric || "",
-    block_ids: [block.id],
-    asset_ids: block.body.asset_ids,
-  };
 }
 
 function collectReferencedAssetIds(blocks: ContentBlock[]): Set<string> {
@@ -167,6 +161,7 @@ export function validatePublicExport(input: {
 
 /**
  * Assemble platform outputs from approved blocks/claims only.
+ * Seeds an editable layout, then derives sections/slides from it.
  * Introduces no new facts.
  */
 export function assembleOutputPayload(input: {
@@ -188,87 +183,44 @@ export function assembleOutputPayload(input: {
     evidence: input.evidence,
   });
 
-  const sections = blocks.map(sectionFromBlock);
-  if (claims.length > 0 && validation.ok) {
-    sections.push({
-      heading: "Supported claims",
-      body: claims.map((claim) => claim.claim_text).join("\n"),
-      block_ids: [],
-    });
+  if (
+    input.outputType === "linkedin_carousel" &&
+    blocks.length > 0 &&
+    blocks.length < 8
+  ) {
+    validation.warnings.push(
+      `Carousel has ${Math.min(blocks.length, 12)} slides; target is 8–12 once more blocks are approved.`,
+    );
   }
 
-  let payload: OutputPayload = {
-    title: input.title,
-    sections,
-    warnings: validation.warnings,
-  };
+  const layout = seedOutputLayout({
+    outputType: input.outputType,
+    blocks,
+  });
 
-  switch (input.outputType) {
-    case "linkedin_carousel": {
-      const slides = blocks.slice(0, 12).map((block, index) => ({
-        title: `${index + 1}. ${block.title || block.block_type}`,
-        body: block.body.text || block.body.metric || "",
-        block_ids: [block.id],
-      }));
-      if (slides.length < 8) {
-        validation.warnings.push(
-          `Carousel has ${slides.length} slides; target is 8–12 once more blocks are approved.`,
-        );
-      }
-      payload = {
-        ...payload,
-        slides,
-        sections: slides.map((slide) => ({
-          heading: slide.title,
-          body: slide.body,
-          block_ids: slide.block_ids,
-        })),
-        warnings: validation.warnings,
-      };
-      break;
-    }
-    case "linkedin_post": {
-      const insight =
-        blocks.find((block) => block.block_type === "outcome") ||
-        blocks.find((block) => block.block_type === "challenge") ||
-        blocks[0];
-      payload = {
-        title: input.title,
-        sections: insight
-          ? [
-              {
-                heading: "Insight",
-                body: insight.body.text || insight.body.metric || "",
-                block_ids: [insight.id],
-              },
-            ]
-          : [],
-        warnings: validation.warnings,
-      };
-      break;
-    }
-    case "upwork": {
-      const preferred = ["challenge", "role", "solution", "outcome"]
-        .map((type) => blocks.find((block) => block.block_type === type))
-        .filter(Boolean) as ContentBlock[];
-      payload = {
-        title: input.title,
-        sections: preferred.map(sectionFromBlock),
-        warnings: validation.warnings,
-      };
-      break;
-    }
-    case "website":
-    case "pdf":
-    default:
-      break;
+  let payload = derivePayloadFromLayout({
+    title: input.title,
+    layout,
+    blocks,
+    warnings: validation.warnings,
+  });
+
+  if (claims.length > 0 && validation.ok) {
+    payload = {
+      ...payload,
+      sections: [
+        ...payload.sections,
+        {
+          heading: "Supported claims",
+          body: claims.map((claim) => claim.claim_text).join("\n"),
+          block_ids: [],
+        },
+      ],
+    };
   }
 
   return {
-    payload: {
-      ...payload,
-      warnings: validation.warnings,
-    },
+    payload,
     validation: {
       ok: validation.ok,
       errors: validation.errors,
