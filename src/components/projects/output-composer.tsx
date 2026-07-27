@@ -20,6 +20,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ChevronDownIcon,
+  ChevronUpIcon,
   GripVerticalIcon,
   Loader2Icon,
   PencilIcon,
@@ -57,14 +59,22 @@ function SortableSlotRow({
   slot,
   block,
   disabled,
+  canMoveUp,
+  canMoveDown,
   onToggle,
   onEdit,
+  onMoveUp,
+  onMoveDown,
 }: {
   slot: OutputLayoutSlot;
   block: ContentBlock | undefined;
   disabled: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onToggle: (included: boolean) => void;
   onEdit: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
   const {
     attributes,
@@ -98,7 +108,7 @@ function SortableSlotRow({
     >
       <button
         type="button"
-        className="mt-1 touch-none text-muted-foreground hover:text-foreground disabled:opacity-40"
+        className="mt-1 hidden touch-none text-muted-foreground hover:text-foreground disabled:opacity-40 md:inline-flex"
         aria-label="Drag to reorder"
         disabled={disabled}
         {...attributes}
@@ -106,6 +116,29 @@ function SortableSlotRow({
       >
         <GripVerticalIcon className="size-4" />
       </button>
+
+      <div className="mt-0.5 flex flex-col gap-1 md:hidden">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          disabled={disabled || !canMoveUp}
+          onClick={onMoveUp}
+          aria-label="Move up"
+        >
+          <ChevronUpIcon />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          disabled={disabled || !canMoveDown}
+          onClick={onMoveDown}
+          aria-label="Move down"
+        >
+          <ChevronDownIcon />
+        </Button>
+      </div>
 
       <div className="mt-1">
         <Checkbox
@@ -251,8 +284,8 @@ export function OutputComposer({
       <div className="flex flex-col gap-1">
         <h2 className="font-heading text-lg font-semibold">Compose layout</h2>
         <p className="text-sm text-muted-foreground">
-          Drag to reorder, toggle inclusion, polish copy. Blocks stay the
-          source of truth — no new facts.
+          Reorder (drag on desktop, arrows on phone), toggle inclusion, polish
+          copy. Blocks stay the source of truth — no new facts.
         </p>
       </div>
 
@@ -266,16 +299,34 @@ export function OutputComposer({
           strategy={verticalListSortingStrategy}
         >
           <div className="flex flex-col gap-2">
-            {ordered.map((slot) => (
+            {ordered.map((slot, index) => (
               <SortableSlotRow
                 key={slot.id}
                 slot={slot}
                 block={blocksById.get(slot.block_id)}
                 disabled={pending}
+                canMoveUp={index > 0}
+                canMoveDown={index < ordered.length - 1}
                 onToggle={(included) =>
                   persist(updateSlot(layout, slot.id, { included }))
                 }
                 onEdit={() => openEditor(slot)}
+                onMoveUp={() => {
+                  const ids = ordered.map((item) => item.id);
+                  const nextIds = arrayMove(ids, index, index - 1);
+                  persist({
+                    ...layout,
+                    slots: reorderSlots(layout.slots, nextIds),
+                  });
+                }}
+                onMoveDown={() => {
+                  const ids = ordered.map((item) => item.id);
+                  const nextIds = arrayMove(ids, index, index + 1);
+                  persist({
+                    ...layout,
+                    slots: reorderSlots(layout.slots, nextIds),
+                  });
+                }}
               />
             ))}
           </div>

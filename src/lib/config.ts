@@ -12,3 +12,8 @@ export function getAppName(): string {
 export function getDataMode(): "supabase" | "local" {
   return isSupabaseConfigured() ? "supabase" : "local";
 }
+
+/** Vercel/serverless local JSON mode cannot persist .data/ across requests. */
+export function isEphemeralHost(): boolean {
+  return getDataMode() === "local" && process.env.VERCEL === "1";
+}

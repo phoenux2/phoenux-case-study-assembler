@@ -1,19 +1,19 @@
-# Output layout composer
+# Roadmap Phases 5–11 + phone deploy docs
 
 ## Goal
 
-After Q&A assembles blocks, users can tweak channel outputs via drag-reorder, include/exclude, and light copy polish — without inventing facts or losing provenance.
+Publish the next-seven-phases roadmap, land the tip on `main`, deploy a phone-testable Vercel URL, and document Supabase wiring + smoke checklist.
 
 ## Acceptance Criteria
 
-- Outputs store an editable `layout.slots` recipe linked to `block_id`
-- Render payload is derived from layout + current block bodies
-- Drag-and-drop reorder, include toggles, and polish sheet persist
-- Saving layout resets output approval to draft
-- Unit tests cover seed / reorder / derive
+- ROADMAP.md lists Phases 5–11
+- `main` includes export gate + layout composer
+- Vercel production URL live with `AI_ENABLED=false`
+- README documents phone URL, Supabase steps, and smoke checklist
+- Ephemeral-host warning when Vercel runs without Supabase
+- Phone-friendly slot reorder controls (up/down arrows)
 
 ## Out of Scope
 
-- Freeform canvas / absolute positioning
-- AI rewrite during layout edits
-- Provenance invalidation cascade (separate P0 item)
+- Creating the user’s Supabase project (requires their dashboard / access token)
+- Full Phase 5–11 feature implementation
