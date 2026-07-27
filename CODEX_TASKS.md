@@ -1,29 +1,42 @@
-Every task should follow this template.
+# Phase 1 — Application scaffold
 
 ## Goal
 
-One feature.
+Stand up the Phase 1 foundation: Next.js app, database schema, auth-ready clients, projects, sources, and assets.
 
 ## Context
 
-Relevant docs.
+- PRODUCT.md
+- ARCHITECTURE.md
+- DATABASE.md
+- IMAGE_ENGINE.md
+- ROADMAP.md (Phase 1)
+- AGENTS.md
 
 ## Acceptance Criteria
 
-Observable behaviour.
+- App runs with `npm run dev`
+- Works without Supabase via local JSON mode under `.data/`
+- User can create a project, add a text source, and upload a file
+- Image uploads create reusable asset records with permission metadata
+- Supabase SQL migration covers Phase 1 tables + RLS
+- `npm run typecheck`, `npm run lint`, `npm test`, and `npm run test:e2e` pass
 
 ## Constraints
 
-Architecture rules.
+- No AI features in Phase 1
+- Deterministic summaries only
+- Provenance on created records
+- Images are assets, not page-specific files
 
 ## Tests
 
-Unit
-
-Integration
-
-Playwright
+- Unit: schemas, summarization, local store
+- Playwright: create project + text source
 
 ## Out of Scope
 
-Everything not required.
+- Question engine UI
+- Content blocks / outputs
+- Extraction / gap detection / editorial AI
+- Vision / Figma
