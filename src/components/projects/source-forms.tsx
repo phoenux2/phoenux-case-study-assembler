@@ -78,9 +78,15 @@ export function UploadFileForm({ projectId }: { projectId: string }) {
         </Field>
         <Field>
           <FieldLabel htmlFor="file">File</FieldLabel>
-          <Input id="file" name="file" type="file" required />
+          <Input
+            id="file"
+            name="file"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.png,.jpg,.jpeg,.webp,.gif,.svg"
+            required
+          />
           <FieldDescription>
-            Images become reusable assets. Other files become sources only.
+            Images become reusable assets. On hosted demo, keep PNGs under ~700KB.
           </FieldDescription>
         </Field>
       </FieldGroup>

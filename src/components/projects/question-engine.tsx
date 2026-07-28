@@ -292,21 +292,47 @@ function AssetSelectField({
 
   return (
     <Field>
-      <FieldLabel htmlFor={name}>{label}</FieldLabel>
-      <select
-        id={name}
-        name={name}
-        required={required}
-        className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <option value="">Select an asset…</option>
-        {assets.map((asset) => (
-          <option key={asset.id} value={asset.id}>
-            {asset.title}
-            {asset.filename ? ` (${asset.filename})` : ""}
-          </option>
-        ))}
-      </select>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {assets.map((asset) => {
+          const preview =
+            asset.storage_path &&
+            (asset.storage_path.startsWith("http://") ||
+              asset.storage_path.startsWith("https://") ||
+              asset.storage_path.startsWith("data:"))
+              ? asset.storage_path
+              : `/api/assets/${asset.id}`;
+
+          return (
+            <label
+              key={asset.id}
+              className="flex cursor-pointer flex-col overflow-hidden rounded-lg border border-input has-[:checked]:border-ring has-[:checked]:ring-3 has-[:checked]:ring-ring/40"
+            >
+              <input
+                type="radio"
+                name={name}
+                value={asset.id}
+                required={required}
+                className="sr-only"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={preview}
+                alt={asset.caption || asset.title}
+                className="h-28 w-full object-cover bg-muted"
+              />
+              <span className="flex flex-col gap-0.5 p-3">
+                <span className="text-sm font-medium leading-tight">
+                  {asset.title}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {asset.filename || asset.category || "Image asset"}
+                </span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
     </Field>
   );
 }
