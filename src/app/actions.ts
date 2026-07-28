@@ -13,10 +13,11 @@ import {
   parseAnswerFromFormData,
   submitAnswer,
 } from "@/lib/services/questions";
-import { listLocalQuestions } from "@/lib/local/store";
+import { createLocalQuestion, listLocalQuestions } from "@/lib/local/store";
 import { getDataMode } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import type { Question } from "@/lib/db/question-types";
+import { getCoverageField } from "@/lib/questions/coverage";
 import { rebuildContentBlocks } from "@/lib/services/blocks";
 import { createOutput, setApproval, updateOutputLayout } from "@/lib/services/outputs";
 import type { OutputLayout, OutputType } from "@/lib/db/block-types";
@@ -170,7 +171,25 @@ async function getQuestion(
 ): Promise<Question | null> {
   if (getDataMode() === "local") {
     const questions = await listLocalQuestions(projectId);
-    return questions.find((question) => question.id === questionId) ?? null;
+    const existing = questions.find((question) => question.id === questionId);
+    if (existing) return existing;
+
+    // Coverage snapshots may emit transient IDs (field:<key>) in hosted cookie mode.
+    if (questionId.startsWith("field:")) {
+      const fieldKey = questionId.replace(/^field:/, "");
+      const field = getCoverageField(fieldKey);
+      if (!field) return null;
+      return createLocalQuestion({
+        project_id: projectId,
+        field_key: field.field_key,
+        question_type: field.question_type,
+        prompt: field.prompt,
+        why: "Coverage question",
+        options: field.options,
+      });
+    }
+
+    return null;
   }
 
   const supabase = await createClient();

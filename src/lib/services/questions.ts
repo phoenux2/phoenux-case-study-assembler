@@ -1,4 +1,5 @@
 import { getDataMode } from "@/lib/config";
+import { usesCookieLocalStore } from "@/lib/local/store";
 import type { Asset, Project, Source } from "@/lib/db/types";
 import type {
   Answer,
@@ -75,6 +76,36 @@ function answersByField(
   return map;
 }
 
+function buildTransientQuestion(
+  projectId: string,
+  fieldKey: string,
+  ctx: CoverageContext,
+): Question {
+  const field = getCoverageField(fieldKey);
+  if (!field) {
+    throw new Error(`Unknown coverage field: ${fieldKey}`);
+  }
+  const timestamp = new Date().toISOString();
+  return {
+    id: `field:${field.field_key}`,
+    project_id: projectId,
+    field_key: field.field_key,
+    question_type: field.question_type,
+    prompt: field.prompt,
+    why: field.why(ctx),
+    options: field.options ?? [],
+    status: "open",
+    confidence: "unknown",
+    approval: "draft",
+    provenance: {
+      source: "coverage-model",
+      method: "deterministic",
+    },
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+}
+
 async function ensureQuestionForField(
   projectId: string,
   fieldKey: string,
@@ -93,6 +124,12 @@ async function ensureQuestionForField(
         why: field.why(ctx),
       };
     }
+
+    // Hosted local mode (cookie store) cannot write during read-only renders.
+    if (usesCookieLocalStore()) {
+      return buildTransientQuestion(projectId, fieldKey, ctx);
+    }
+
     return createLocalQuestion({
       project_id: projectId,
       field_key: field.field_key,
