@@ -58,13 +58,31 @@ export async function createProjectAction(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const project = await createProject(user.id, {
-    title: parsed.data.title,
-    client_name: parsed.data.client_name || undefined,
-    summary: parsed.data.summary || undefined,
-  });
-
-  redirect(`/projects/${project.id}`);
+  try {
+    const project = await createProject(user.id, {
+      title: parsed.data.title,
+      client_name: parsed.data.client_name || undefined,
+      summary: parsed.data.summary || undefined,
+    });
+    redirect(`/projects/${project.id}`);
+  } catch (error) {
+    // `redirect()` throws; rethrow so Next can handle navigation.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "digest" in error &&
+      String((error as { digest?: unknown }).digest).includes("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not create project",
+    };
+  }
 }
 
 export async function addTextSourceAction(

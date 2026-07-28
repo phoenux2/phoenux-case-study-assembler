@@ -31,19 +31,12 @@ export default async function ProjectsPage() {
       </div>
 
       {ephemeral ? (
-        <Alert variant="destructive">
-          <AlertTitle>Phone / Vercel needs Supabase</AlertTitle>
+        <Alert>
+          <AlertTitle>Hosted demo mode</AlertTitle>
           <AlertDescription>
-            This deploy is in local JSON mode on serverless hosting, so project
-            data will not survive across requests. Add{" "}
-            <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
-            and{" "}
-            <code className="font-mono text-xs">
-              NEXT_PUBLIC_SUPABASE_ANON_KEY
-            </code>{" "}
-            in the Vercel project env, run migrations{" "}
-            <code className="font-mono text-xs">001</code>–
-            <code className="font-mono text-xs">004</code>, then redeploy.
+            Projects persist in your browser cookies for this phone smoke test.
+            Large uploads can exceed cookie limits — add Supabase env vars on
+            Vercel for durable multi-device storage.
           </AlertDescription>
         </Alert>
       ) : mode === "local" ? (

@@ -21,9 +21,11 @@ Next work is Phases 5–11 — see [ROADMAP.md](ROADMAP.md).
 
 `AI_ENABLED=false` is set on Vercel so the assembler path runs without AI.
 
-### Durable data (required for phone)
+### Durable data (required for multi-device / large uploads)
 
-Vercel serverless cannot keep `.data/` between requests. For a real phone trial:
+Vercel serverless cannot keep `.data/` between requests. Hosted local mode now
+persists a **compressed cookie copy** of the demo DB so create → project works
+on your phone. Prefer Supabase for real use:
 
 1. Create a Supabase project
 2. In the SQL editor, run in order:
@@ -36,7 +38,8 @@ Vercel serverless cannot keep `.data/` between requests. For a real phone trial:
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. Redeploy (`git push` to `main` or `vercel deploy --prod`)
 
-Until those vars are set, the site shows a red “needs Supabase” banner and data will not persist.
+Until Supabase is set, the site uses browser-cookie demo persistence (fine for
+smoke tests; limited size).
 
 ### Same-Wi‑Fi fallback (Mac local)
 

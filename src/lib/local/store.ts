@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { deflateSync, inflateSync } from "zlib";
 
 import type {
   Asset,
@@ -48,6 +49,11 @@ type LocalDb = {
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DB_PATH = path.join(DATA_DIR, "local-db.json");
+const COOKIE_PREFIX = "phoenux_ldb";
+const COOKIE_COUNT = `${COOKIE_PREFIX}_n`;
+/** Stay under typical 4KB cookie limits including attributes. */
+const COOKIE_CHUNK_SIZE = 3000;
+const COOKIE_MAX_CHUNKS = 40;
 
 const LOCAL_USER_ID = "00000000-0000-4000-8000-000000000001";
 
@@ -81,24 +87,132 @@ function emptyDb(): LocalDb {
   };
 }
 
+function normalizeDb(parsed: Partial<LocalDb>): LocalDb {
+  return {
+    ...emptyDb(),
+    ...parsed,
+    questions: parsed.questions ?? [],
+    answers: parsed.answers ?? [],
+    answer_assets: parsed.answer_assets ?? [],
+    content_blocks: parsed.content_blocks ?? [],
+    claims: parsed.claims ?? [],
+    evidence: parsed.evidence ?? [],
+    outputs: parsed.outputs ?? [],
+    facts: parsed.facts ?? [],
+    knowledge_entries: parsed.knowledge_entries ?? [],
+  };
+}
+
+/** Serverless hosts (Vercel) cannot persist `.data/` across requests. */
+export function usesCookieLocalStore(): boolean {
+  return process.env.VERCEL === "1";
+}
+
+export function encodeLocalDb(db: LocalDb): string {
+  return deflateSync(Buffer.from(JSON.stringify(db), "utf8")).toString(
+    "base64url",
+  );
+}
+
+export function decodeLocalDb(encoded: string): LocalDb {
+  const json = inflateSync(Buffer.from(encoded, "base64url")).toString("utf8");
+  return normalizeDb(JSON.parse(json) as Partial<LocalDb>);
+}
+
+function chunkEncoded(encoded: string): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < encoded.length; i += COOKIE_CHUNK_SIZE) {
+    chunks.push(encoded.slice(i, i + COOKIE_CHUNK_SIZE));
+  }
+  return chunks;
+}
+
+async function readCookieDb(): Promise<LocalDb | null> {
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  const countRaw = jar.get(COOKIE_COUNT)?.value;
+  if (!countRaw) return null;
+  const count = Number(countRaw);
+  if (!Number.isFinite(count) || count <= 0) return null;
+
+  let encoded = "";
+  for (let i = 0; i < count; i += 1) {
+    const part = jar.get(`${COOKIE_PREFIX}_${i}`)?.value;
+    if (!part) return null;
+    encoded += part;
+  }
+
+  try {
+    return decodeLocalDb(encoded);
+  } catch {
+    return null;
+  }
+}
+
+async function writeCookieDb(db: LocalDb): Promise<void> {
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  const encoded = encodeLocalDb(db);
+  const chunks = chunkEncoded(encoded);
+
+  if (chunks.length > COOKIE_MAX_CHUNKS) {
+    throw new Error(
+      "Local demo data is too large for hosted cookie storage. Add Supabase env vars on Vercel for durable projects.",
+    );
+  }
+
+  const previous = Number(jar.get(COOKIE_COUNT)?.value || "0");
+  const options = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  };
+
+  jar.set(COOKIE_COUNT, String(chunks.length), options);
+  chunks.forEach((chunk, index) => {
+    jar.set(`${COOKIE_PREFIX}_${index}`, chunk, options);
+  });
+
+  for (let i = chunks.length; i < previous; i += 1) {
+    jar.delete(`${COOKIE_PREFIX}_${i}`);
+  }
+}
+
+async function clearCookieDb(): Promise<void> {
+  try {
+    const { cookies } = await import("next/headers");
+    const jar = await cookies();
+    const previous = Number(jar.get(COOKIE_COUNT)?.value || "0");
+    jar.delete(COOKIE_COUNT);
+    for (let i = 0; i < Math.max(previous, COOKIE_MAX_CHUNKS); i += 1) {
+      jar.delete(`${COOKIE_PREFIX}_${i}`);
+    }
+  } catch {
+    // ignore outside request scope
+  }
+}
+
 async function ensureDb(): Promise<LocalDb> {
+  if (usesCookieLocalStore()) {
+    const fromCookie = await readCookieDb();
+    if (fromCookie) return fromCookie;
+    const db = emptyDb();
+    // Best-effort seed; may no-op if called outside a mutable cookie context.
+    try {
+      await writeCookieDb(db);
+    } catch {
+      /* read-only RSC on first visit */
+    }
+    return db;
+  }
+
   await fs.mkdir(DATA_DIR, { recursive: true });
   try {
     const raw = await fs.readFile(DB_PATH, "utf8");
     const parsed = JSON.parse(raw) as Partial<LocalDb>;
-    return {
-      ...emptyDb(),
-      ...parsed,
-      questions: parsed.questions ?? [],
-      answers: parsed.answers ?? [],
-      answer_assets: parsed.answer_assets ?? [],
-      content_blocks: parsed.content_blocks ?? [],
-      claims: parsed.claims ?? [],
-      evidence: parsed.evidence ?? [],
-      outputs: parsed.outputs ?? [],
-      facts: parsed.facts ?? [],
-      knowledge_entries: parsed.knowledge_entries ?? [],
-    };
+    return normalizeDb(parsed);
   } catch {
     const db = emptyDb();
     await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
@@ -107,6 +221,10 @@ async function ensureDb(): Promise<LocalDb> {
 }
 
 async function saveDb(db: LocalDb): Promise<void> {
+  if (usesCookieLocalStore()) {
+    await writeCookieDb(db);
+    return;
+  }
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
 }
@@ -747,6 +865,10 @@ export async function updateLocalAssetVision(
 
 /** Test helper — reset local DB between unit tests. */
 export async function resetLocalDb(): Promise<void> {
+  if (usesCookieLocalStore()) {
+    await clearCookieDb();
+    return;
+  }
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(DB_PATH, JSON.stringify(emptyDb(), null, 2));
 }
