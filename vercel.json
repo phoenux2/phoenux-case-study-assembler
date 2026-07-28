@@ -1,0 +1,22 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/templates",
+      "destination": "/templates"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/templates/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=3600, stale-while-revalidate"
+        }
+      ]
+    }
+  ]
+}
