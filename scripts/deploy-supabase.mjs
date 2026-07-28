@@ -166,9 +166,7 @@ async function getAnonKey(ref) {
 
 async function configureAuth(ref) {
   console.log("Configuring Auth site URL + redirects…");
-  const current = await api("GET", `/projects/${ref}/config/auth`);
   await api("PATCH", `/projects/${ref}/config/auth`, {
-    ...current,
     site_url: SITE_URL,
     uri_allow_list: [
       SITE_URL,
@@ -176,10 +174,6 @@ async function configureAuth(ref) {
       `${SITE_URL}/auth/callback`,
       "http://localhost:3000",
       "http://localhost:3000/**",
-      "http://localhost:3000/auth/callback",
-    ].join(","),
-    additional_redirect_urls: [
-      `${SITE_URL}/auth/callback`,
       "http://localhost:3000/auth/callback",
     ].join(","),
   });

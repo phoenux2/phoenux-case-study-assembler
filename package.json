@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "deploy:supabase": "node scripts/deploy-supabase.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

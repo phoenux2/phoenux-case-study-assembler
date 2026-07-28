@@ -21,25 +21,22 @@ Next work is Phases 5–11 — see [ROADMAP.md](ROADMAP.md).
 
 `AI_ENABLED=false` is set on Vercel so the assembler path runs without AI.
 
-### Durable data (required for multi-device / large uploads)
+### Durable data (Supabase on Vercel)
 
-Vercel serverless cannot keep `.data/` between requests. Hosted local mode now
-persists a **compressed cookie copy** of the demo DB so create → project works
-on your phone. Prefer Supabase for real use:
+One-command provision (needs a personal access token):
 
-1. Create a Supabase project
-2. In the SQL editor, run in order:
-   - `supabase/migrations/001_initial.sql`
-   - `supabase/migrations/002_question_engine.sql`
-   - `supabase/migrations/003_facts.sql`
-   - `supabase/migrations/004_knowledge.sql`
-3. In Vercel → Project → Settings → Environment Variables, add:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-4. Redeploy (`git push` to `main` or `vercel deploy --prod`)
+1. Create a token: https://supabase.com/dashboard/account/tokens
+2. Run:
 
-Until Supabase is set, the site uses browser-cookie demo persistence (fine for
-smoke tests; limited size).
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... npm run deploy:supabase
+```
+
+That script will create the Supabase project (or reuse it), apply migrations
+`001`–`004`, set Auth redirect URLs, write `NEXT_PUBLIC_SUPABASE_URL` +
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` to Vercel, and redeploy production.
+
+Until Supabase is wired, hosted local mode uses browser-cookie demo persistence.
 
 ### Same-Wi‑Fi fallback (Mac local)
 
