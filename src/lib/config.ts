@@ -1,3 +1,7 @@
+export function isAuthBypassEnabled(): boolean {
+  return process.env.AUTH_BYPASS === "true";
+}
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -10,6 +14,9 @@ export function getAppName(): string {
 }
 
 export function getDataMode(): "supabase" | "local" {
+  if (isAuthBypassEnabled()) {
+    return "local";
+  }
   return isSupabaseConfigured() ? "supabase" : "local";
 }
 

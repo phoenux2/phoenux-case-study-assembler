@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { isAiEnabled } from "@/lib/ai/config";
-import { getDataMode, isEphemeralHost } from "@/lib/config";
+import { getDataMode, isAuthBypassEnabled, isEphemeralHost } from "@/lib/config";
 import { usesCookieLocalStore } from "@/lib/local/store";
 import { figmaStatus } from "@/lib/services/figma";
 
@@ -10,6 +10,7 @@ export function SystemStatus() {
   const figma = figmaStatus();
   const ephemeral = isEphemeralHost();
   const cookieStore = usesCookieLocalStore();
+  const authBypass = isAuthBypassEnabled();
 
   return (
     <div className="flex flex-wrap gap-2" aria-label="System status">
@@ -29,6 +30,9 @@ export function SystemStatus() {
       </Badge>
       {ephemeral ? (
         <Badge variant="outline">Hosted demo persistence</Badge>
+      ) : null}
+      {authBypass ? (
+        <Badge variant="destructive">Auth bypass ON</Badge>
       ) : null}
     </div>
   );

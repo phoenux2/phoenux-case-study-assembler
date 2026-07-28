@@ -1,12 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isSupabaseConfigured } from "@/lib/config";
+import { isAuthBypassEnabled, isSupabaseConfigured } from "@/lib/config";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || isAuthBypassEnabled()) {
     return supabaseResponse;
   }
 
