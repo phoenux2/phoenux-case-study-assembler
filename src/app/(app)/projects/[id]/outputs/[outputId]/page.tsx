@@ -10,6 +10,16 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getProject } from "@/lib/services/projects";
 import { getOutput, resolveOutputLayout } from "@/lib/services/outputs";
 import { listContentBlocks } from "@/lib/services/blocks";
+import { listAssets } from "@/lib/services/assets";
+
+function canPreviewAsset(storagePath: string | null): boolean {
+  if (!storagePath) return false;
+  return (
+    storagePath.startsWith("http://") ||
+    storagePath.startsWith("https://") ||
+    storagePath.startsWith("data:")
+  );
+}
 
 export default async function OutputDetailPage({
   params,
@@ -27,6 +37,8 @@ export default async function OutputDetailPage({
   if (!output) notFound();
 
   const blocks = await listContentBlocks(project.id);
+  const assets = await listAssets(project.id);
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
   const layout = resolveOutputLayout(output);
   const isPdf = output.output_type === "pdf";
   const locked = output.approval === "approved";
@@ -128,6 +140,51 @@ export default async function OutputDetailPage({
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                 {section.body || "—"}
               </p>
+              {section.asset_ids?.length ? (
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  {section.asset_ids.map((assetId) => {
+                    const asset = assetsById.get(assetId);
+                    if (!asset) {
+                      return (
+                        <div
+                          key={assetId}
+                          className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground"
+                        >
+                          Linked image not found ({assetId.slice(0, 8)}…).
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <figure
+                        key={asset.id}
+                        className="overflow-hidden rounded-lg border border-border"
+                      >
+                        {canPreviewAsset(asset.storage_path) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={asset.storage_path!}
+                            alt={asset.caption || asset.title}
+                            className="h-44 w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-44 items-center justify-center bg-muted px-4 text-center text-xs text-muted-foreground">
+                            Image linked but preview unavailable in this mode.
+                          </div>
+                        )}
+                        <figcaption className="space-y-1 p-3">
+                          <p className="text-sm font-medium leading-tight">
+                            {asset.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {asset.caption || asset.description || "No caption"}
+                          </p>
+                        </figcaption>
+                      </figure>
+                    );
+                  })}
+                </div>
+              ) : null}
               {index < output.payload.sections.length - 1 ? (
                 <Separator className="mt-4 print:hidden" />
               ) : null}
