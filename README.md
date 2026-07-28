@@ -21,6 +21,29 @@ Next work is Phases 5–11 — see [ROADMAP.md](ROADMAP.md).
 
 `AI_ENABLED=false` is set on Vercel so the assembler path runs without AI.
 
+
+### AI providers (OpenAI or Kimi)
+
+The app uses one OpenAI-compatible client. You can point it to OpenAI or Kimi.
+
+For Kimi:
+
+```bash
+AI_ENABLED=true
+KIMI_API_KEY=<SECRET>
+KIMI_BASE_URL=https://api.moonshot.cn/v1
+KIMI_MODEL=kimi-k2-0711-preview
+```
+
+Or use the generic keys:
+
+```bash
+AI_ENABLED=true
+AI_API_KEY=<SECRET>
+AI_BASE_URL=https://api.moonshot.cn/v1
+AI_MODEL=kimi-k2-0711-preview
+```
+
 ### Durable data (Supabase on Vercel)
 
 One-command provision (needs a personal access token):
