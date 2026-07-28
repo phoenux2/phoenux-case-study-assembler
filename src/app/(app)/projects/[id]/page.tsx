@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import {
   AddTextSourceForm,
@@ -38,6 +38,7 @@ import { listOutputs } from "@/lib/services/outputs";
 import { getAiStatus, listFacts } from "@/lib/services/ai-pipeline";
 import { listKnowledge } from "@/lib/services/knowledge";
 import { figmaStatus } from "@/lib/services/figma";
+import { isAuthBypassEnabled } from "@/lib/config";
 
 export default async function ProjectDetailPage({
   params,
@@ -49,7 +50,12 @@ export default async function ProjectDetailPage({
   if (!user) notFound();
 
   const project = await getProject(id, user.id);
-  if (!project) notFound();
+  if (!project) {
+    if (isAuthBypassEnabled()) {
+      redirect("/projects");
+    }
+    notFound();
+  }
 
   const [sources, assets, blocks, claims, outputs, facts, knowledge] = await Promise.all([
     listSources(project.id),
