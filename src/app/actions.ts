@@ -41,6 +41,7 @@ import type { RetrievalHit } from "@/lib/db/phase4-types";
 export type ActionResult = {
   ok: boolean;
   error?: string;
+  projectId?: string;
 };
 
 export async function createProjectAction(
@@ -64,17 +65,8 @@ export async function createProjectAction(
       client_name: parsed.data.client_name || undefined,
       summary: parsed.data.summary || undefined,
     });
-    redirect(`/projects/${project.id}`);
+    return { ok: true, projectId: project.id };
   } catch (error) {
-    // `redirect()` throws; rethrow so Next can handle navigation.
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "digest" in error &&
-      String((error as { digest?: unknown }).digest).includes("NEXT_REDIRECT")
-    ) {
-      throw error;
-    }
     return {
       ok: false,
       error:

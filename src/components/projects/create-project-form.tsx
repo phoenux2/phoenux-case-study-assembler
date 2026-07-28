@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 
 import {
@@ -20,10 +21,18 @@ import { Textarea } from "@/components/ui/textarea";
 const initial: ActionResult | null = null;
 
 export function CreateProjectForm() {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(
     createProjectAction,
     initial,
   );
+
+  useEffect(() => {
+    if (state?.ok && state.projectId) {
+      router.push(`/projects/${state.projectId}`);
+      router.refresh();
+    }
+  }, [state, router]);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
