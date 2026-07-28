@@ -12,13 +12,19 @@ import { getOutput, resolveOutputLayout } from "@/lib/services/outputs";
 import { listContentBlocks } from "@/lib/services/blocks";
 import { listAssets } from "@/lib/services/assets";
 
-function canPreviewAsset(storagePath: string | null): boolean {
-  if (!storagePath) return false;
-  return (
+function assetPreviewSrc(
+  assetId: string,
+  storagePath: string | null,
+): string | null {
+  if (!storagePath) return `/api/assets/${assetId}`;
+  if (
     storagePath.startsWith("http://") ||
     storagePath.startsWith("https://") ||
     storagePath.startsWith("data:")
-  );
+  ) {
+    return storagePath;
+  }
+  return `/api/assets/${assetId}`;
 }
 
 export default async function OutputDetailPage({
@@ -155,15 +161,20 @@ export default async function OutputDetailPage({
                       );
                     }
 
+                    const previewSrc = assetPreviewSrc(
+                      asset.id,
+                      asset.storage_path,
+                    );
+
                     return (
                       <figure
                         key={asset.id}
                         className="overflow-hidden rounded-lg border border-border"
                       >
-                        {canPreviewAsset(asset.storage_path) ? (
+                        {previewSrc ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={asset.storage_path!}
+                            src={previewSrc}
                             alt={asset.caption || asset.title}
                             className="h-44 w-full object-cover"
                           />
