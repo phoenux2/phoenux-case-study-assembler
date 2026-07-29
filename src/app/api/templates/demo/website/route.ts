@@ -66,6 +66,7 @@ The new design system was adopted across other parts of the platform, creating c
     payload: samplePayload,
     projectName: "Transforming the checkout experience for 2M+ monthly users",
     clientName: "TechRetail Co.",
+    projectId: "ecommerce-redesign-2024",
   });
 
   return new NextResponse(html, {

@@ -141,11 +141,16 @@ export const COVERAGE_FIELDS: CoverageField[] = [
       { value: "restricted", label: "Restricted — named audiences only" },
       { value: "blocked", label: "Blocked — never export" },
     ],
+    // Stay applicable after the answer is saved even when assets flip off
+    // "internal" — otherwise the counter jumps (e.g. 8/9 → 8/8) and feels broken.
     isApplicable: (ctx) =>
-      ctx.assets.some((asset) => asset.permission === "internal"),
+      ctx.assets.length > 0 &&
+      (ctx.assets.some((asset) => asset.permission === "internal") ||
+        getAnswerPermission(ctx, "export_permission") !== null),
     isSatisfied: (ctx) =>
       getAnswerPermission(ctx, "export_permission") !== null ||
-      ctx.assets.every((asset) => asset.permission !== "internal"),
+      (ctx.assets.length > 0 &&
+        ctx.assets.every((asset) => asset.permission !== "internal")),
   },
   {
     field_key: "overall_confidence",

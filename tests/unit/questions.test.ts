@@ -116,6 +116,60 @@ describe("evaluateCoverage", () => {
     ).toBe(true);
   });
 
+  it("keeps export_permission in the total after permission is answered", () => {
+    const asset = {
+      id: "asset-1",
+      project_id: "p1",
+      source_id: null,
+      uploaded_by: "u1",
+      title: "Dashboard",
+      filename: "dash.png",
+      mime_type: "image/png",
+      storage_path: null,
+      category: "screenshot",
+      phase: "unknown" as const,
+      permission: "restricted" as const,
+      quality: "unreviewed" as const,
+      description: null,
+      caption: null,
+      relationships: [],
+      annotations: [],
+      confidence: "medium" as const,
+      approval: "draft" as const,
+      provenance: { method: "user" as const },
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+    };
+
+    const answersByField = new Map<string, Answer>([
+      [
+        "export_permission",
+        {
+          id: "a-perm",
+          question_id: "q-perm",
+          project_id: "p1",
+          answered_by: "u1",
+          value: { permission: "restricted", selected: ["restricted"] },
+          confidence: "high",
+          approval: "draft",
+          provenance: { method: "user" },
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    ]);
+
+    const result = evaluateCoverage(
+      ctx({ assets: [asset], answersByField }),
+    );
+    expect(
+      result.applicable.some((field) => field.field_key === "export_permission"),
+    ).toBe(true);
+    expect(
+      result.answered.some((field) => field.field_key === "export_permission"),
+    ).toBe(true);
+  });
+
   it("explains why a gap exists using available evidence", () => {
     const sources: Source[] = [
       {

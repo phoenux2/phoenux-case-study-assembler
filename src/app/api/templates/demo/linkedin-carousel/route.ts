@@ -63,6 +63,7 @@ export async function GET() {
 
   const html = generateLinkedInCarouselHTML({
     payload: samplePayload,
+    projectId: "ecommerce-redesign-carousel",
   });
 
   return new NextResponse(html, {

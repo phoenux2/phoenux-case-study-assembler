@@ -16,6 +16,23 @@ function getFigmaToken(): string | null {
   return process.env.FIGMA_ACCESS_TOKEN || null;
 }
 
+function stubFramePreview(title: string, nodeId: string): string {
+  const safeTitle = title.replace(/[<>&]/g, "");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#4b5563"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#g)"/>
+  <text x="32" y="64" fill="#f9fafb" font-family="Georgia, serif" font-size="28">${safeTitle}</text>
+  <text x="32" y="104" fill="#d1d5db" font-family="ui-sans-serif, system-ui" font-size="16">Figma frame ${nodeId}</text>
+  <rect x="32" y="150" width="576" height="200" rx="12" fill="#111827" opacity="0.55"/>
+</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 async function fetchFigmaFile(fileKey: string): Promise<FigmaImportResult> {
   const token = getFigmaToken();
   if (!token) {
@@ -101,6 +118,7 @@ export async function importFigmaFile(
         title: node.name,
         filename: `${node.id}.figma-frame`,
         mime_type: "image/svg+xml",
+        storage_path: stubFramePreview(node.name, node.id),
         category: "figma-frame",
         phase: node.preview_hint === "problem" ? "discovery" : "design",
         description: `Figma ${node.type} ${node.id}`,
@@ -127,6 +145,7 @@ export async function importFigmaFile(
         title: node.name,
         filename: `${node.id}.figma-frame`,
         mime_type: "image/svg+xml",
+        storage_path: stubFramePreview(node.name, node.id),
         category: "figma-frame",
         phase: node.preview_hint === "problem" ? "discovery" : "design",
         description: `Figma ${node.type} ${node.id}`,

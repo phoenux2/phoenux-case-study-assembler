@@ -112,57 +112,95 @@ export async function uploadFileAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const user = await requireSessionUser();
-  const project = await getProject(projectId, user.id);
-  if (!project) return { ok: false, error: "Project not found" };
+  try {
+    const user = await requireSessionUser();
+    const project = await getProject(projectId, user.id);
+    if (!project) return { ok: false, error: "Project not found" };
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Choose a file to upload" };
-  }
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      return { ok: false, error: "Choose a file to upload" };
+    }
 
-  const title =
-    String(formData.get("title") || "").trim() ||
-    file.name.replace(/\.[^.]+$/, "") ||
-    "Uploaded file";
+    // Keep uploads small for hosted local/cookie mode and serverless limits.
+    const maxBytes = 4 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return {
+        ok: false,
+        error: "File is too large (max 4MB). Compress the image and try again.",
+      };
+    }
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const storagePath = `local/${user.id}/${projectId}/${Date.now()}-${file.name}`;
+    const title =
+      String(formData.get("title") || "").trim() ||
+      file.name.replace(/\.[^.]+$/, "") ||
+      "Uploaded file";
 
-  // Persist bytes for local mode so assets remain inspectable without Supabase Storage.
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    const { promises: fs } = await import("fs");
-    const path = await import("path");
-    const fullPath = path.join(process.cwd(), ".data", "uploads", storagePath);
-    await fs.mkdir(path.dirname(fullPath), { recursive: true });
-    await fs.writeFile(fullPath, bytes);
-  }
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const mimeType = file.type || "application/octet-stream";
+    const isImage = isImageMimeType(mimeType);
+    let storagePath = `local/${user.id}/${projectId}/${Date.now()}-${file.name}`;
 
-  const source = await createSource(user.id, {
-    project_id: projectId,
-    source_type: "file",
-    title,
-    filename: file.name,
-    mime_type: file.type || "application/octet-stream",
-    storage_path: storagePath,
-    content_summary: `Uploaded file: ${file.name} (${file.size} bytes)`,
-  });
+    const { usesCookieLocalStore } = await import("@/lib/local/store");
+    const cookieMode = usesCookieLocalStore();
 
-  if (isImageMimeType(file.type)) {
-    await createAsset(user.id, {
+    if (cookieMode) {
+      // Vercel local demo cannot persist binary uploads across requests.
+      // Store compact data URLs for images so previews still work.
+      if (!isImage) {
+        return {
+          ok: false,
+          error:
+            "Hosted demo mode only accepts images right now. Add Supabase for general file storage.",
+        };
+      }
+      if (file.size > 700_000) {
+        return {
+          ok: false,
+          error:
+            "Image is too large for hosted demo storage. Use a PNG/JPG under ~700KB, or connect Supabase.",
+        };
+      }
+      storagePath = `data:${mimeType};base64,${bytes.toString("base64")}`;
+    } else {
+      // Persist bytes for local filesystem mode.
+      const { promises: fs } = await import("fs");
+      const path = await import("path");
+      const fullPath = path.join(process.cwd(), ".data", "uploads", storagePath);
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.writeFile(fullPath, bytes);
+    }
+
+    const source = await createSource(user.id, {
       project_id: projectId,
-      source_id: source.id,
+      source_type: "file",
       title,
       filename: file.name,
-      mime_type: file.type,
-      storage_path: storagePath,
-      category: "screenshot",
-      permission: "internal",
+      mime_type: mimeType,
+      storage_path: cookieMode && isImage ? undefined : storagePath,
+      content_summary: `Uploaded file: ${file.name} (${file.size} bytes)`,
     });
-  }
 
-  revalidatePath(`/projects/${projectId}`);
-  return { ok: true };
+    if (isImage) {
+      await createAsset(user.id, {
+        project_id: projectId,
+        source_id: source.id,
+        title,
+        filename: file.name,
+        mime_type: mimeType,
+        storage_path: storagePath,
+        category: "screenshot",
+        permission: "internal",
+      });
+    }
+
+    revalidatePath(`/projects/${projectId}`);
+    return { ok: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Upload failed unexpectedly";
+    return { ok: false, error: message };
+  }
 }
 
 async function getQuestion(

@@ -45,6 +45,7 @@ export async function GET() {
     payload: samplePayload,
     projectName: "Case Study Presentation",
     clientName: "TechRetail Co.",
+    projectId: "ecommerce-pdf-2024",
   });
 
   // Add print-specific styles
