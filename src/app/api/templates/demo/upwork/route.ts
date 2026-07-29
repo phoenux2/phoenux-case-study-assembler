@@ -40,6 +40,7 @@ The design system was adopted across other platform areas, reducing future desig
   const html = generateUpworkHTML({
     payload: samplePayload,
     clientName: "TechRetail Co. | 6-month project",
+    projectId: "ecommerce-upwork-2024",
   });
 
   return new NextResponse(html, {
